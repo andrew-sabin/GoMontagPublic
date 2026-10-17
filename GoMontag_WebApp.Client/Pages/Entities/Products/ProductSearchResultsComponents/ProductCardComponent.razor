@@ -1,0 +1,135 @@
+﻿@inject NavigationManager NavigationManager
+@rendermode InteractiveWebAssembly
+
+<div class="card my-4">
+	<div class="card-header">
+		<a href="/products/view/@item.Slug">
+			<h5>@item.Name</h5>
+		</a>
+	</div>
+	<div class="card-body">
+		<div class="product-container">
+			<div class="product-image-column">
+				@if (item.CoverImageURL == null || item.CoverImageURL == "")
+				{
+					<p>
+						<a href="/products/view/@item.Slug">
+							<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+								 class="img-thumbnail"
+								 style="max-width: min(200px, 100%); max-height: 300px;"
+								 alt="Missing Image Picture Created By: Khanh Nguyen" />
+						</a>
+					</p>
+
+				}
+				else
+				{
+					<p>
+						<a href="/products/view/@item.Slug">
+							<img src="@item.CoverImageURL"
+								 style="max-width: min(200px, 100%); max-height: 200px;"
+								 class="img-thumbnail" />
+						</a>
+					</p>
+				}
+			</div>
+			<div class="product-details-column">
+				<p><strong>@item.Category.Name</strong></p>
+				@if (string.IsNullOrEmpty(item.Category.CreatorsTitle))
+				{
+					<p><strong>Created By:</strong> @item.Creators</p>
+				}
+				else
+				{
+					<p><strong>@item.Category.CreatorsTitle:</strong> @item.Creators</p>
+				}
+				<p><strong>For Ages:</strong> @item.ContentRating+</p>
+				<p><strong>First Released:</strong> @item.ProductLaunchDate</p>
+				<p><strong>Added To Site:</strong> @item.CreatedDate</p>
+
+				@if (item.IsAIAssisted)
+				{
+					<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+				}
+				@if (item.ForMatureAudiences)
+				{
+					<p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+				}
+			</div>
+			<div class="product-description-row">
+				<p><strong>Product Description:</strong></p>
+				<p>@item.Description</p>
+				<a class="btn btn-primary" href="/products/view/@item.Slug">View Product Details</a>
+				@if (string.IsNullOrEmpty(item.Category.FormatsTitle))
+				{
+					<button class="btn btn-primary" data-target="#productFormats"
+							@onclick="() => ShowFormats(item.Id)"
+							aria-expanded="@(productId == item.Id ? "true" : "false")"
+							area-controls="@("productFormats-{item.Id}")">
+						@(productId == item.Id ? "Hide Formats" : "Show Formats")
+					</button>
+				}
+				else
+				{
+					<button class="btn btn-primary" data-target="#productFormats"
+							@onclick="() => ShowFormats(item.Id)"
+							aria-expanded="@(productId == item.Id ? "true" : "false")"
+							area-controls="@("productFormats-{item.Id}")">
+						@(productId == item.Id ? $"Hide {item.Category.FormatsTitle}" : $"Show {item.Category.FormatsTitle}")
+					</button>
+				}
+				@if (!item.IsLocked)
+				{
+					<AuthorizeView Roles="Admin, Moderator, AlphaUser, User" Context="authState">
+						<Authorized>
+							<button class="btn btn-primary" @onclick="@(() => EditProduct(item.Slug))">
+								Edit Product
+							</button>
+						</Authorized>
+					</AuthorizeView>
+				}
+				else
+				{
+					<AuthorizeView Roles="Admin, Moderator" Context="authState">
+						<Authorized>
+							<button class="btn btn-primary" @onclick="@(() => EditProduct(item.Slug))">
+								Edit Product
+							</button>
+						</Authorized>
+					</AuthorizeView>
+				}
+			</div>
+		</div>
+	</div>
+	<div class="@($"collapse {(productId == item.Id ? "show" : "")}")" id="@($"productFormats-{item.Id}")">
+		<div class="card card-body mt-2">
+			@if (productId == item.Id)
+			{
+				<FormatsList ProductId="@item.Id" ProductSlug="@item.Slug" TypeTitle="@item.Category.TypeTitle"
+							 EditionTitle="@item.Category.EditionTitle" FromProdList=true />
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public ProductResponse item { get; set; }
+	int productId;
+
+
+	private void ShowFormats(int id)
+	{
+		if (productId == id)
+		{
+			return;
+		}
+		productId = id;
+		StateHasChanged();
+	}
+
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+}

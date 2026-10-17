@@ -1,0 +1,73 @@
+﻿@inject IProductClientToServerComponentService productService
+@inject IRecommendationItemClientToServerComponentService recommendationItemService
+@rendermode InteractiveServer
+
+@if(loading == false && notFound == false)
+{
+    <div class="card" style="width: 15rem;">
+        @if (!string.IsNullOrEmpty(cardProduct!.Value.CoverImageURL))
+        {
+            <a href="products/view/@cardProduct!.Value.Slug"><img src="@cardProduct!.Value.CoverImageURL" 
+                     class="card-img-top" alt="@cardProduct.Value.Name Alt" style="max-height: 224px;">
+            </a>
+        }
+        else
+        {
+            <a href="products/view/@cardProduct!.Value.Slug"><img src="/images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg" 
+                class="card-img-top" alt="Missing Image Picture Created By: Khanh Nguyen" style="max-height: 130px;"></a>
+        }
+        
+        <div class="card-body" style="border-color:darkgray; border-top:solid">
+            <a href="products/view/@cardProduct.Value.Slug"><h5 class="card-title">@cardProduct.Value.Name</h5></a>
+            <p class="card-text"><strong>For Ages:</strong> @cardProduct.Value.ContentRating+</p>
+            <p class="card-text">@cardItem!.Value.Notes</p>
+            <a href="products/view/@cardProduct.Value.Slug" class="btn btn-primary">View Product</a>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int recommendedItemId { get; set; }
+
+    private int productId { get; set; }
+
+    private bool notFound { get; set; } = false;
+
+    private RecommendedItemResponse? cardItem = new();
+    private ProductResponse? cardProduct = new();
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(recommendedItemId <= 0)
+        {
+            notFound = true;
+        }
+        else
+        {
+            var cardItemResponse = await recommendationItemService.GetRecommendationItemById(recommendedItemId);
+            if (cardItemResponse == null)
+            {
+                notFound = true;
+            }
+            else
+            {
+                cardItem = cardItemResponse;
+                var cardProductResponse = await productService.GetProductById(cardItem.Value.ProductId);
+                if(cardItemResponse == null)
+                {
+                    notFound = true;
+                }
+                else
+                {
+                    cardProduct = cardProductResponse;
+                }
+            }
+        }
+        loading = false;
+    } 
+}
+
+

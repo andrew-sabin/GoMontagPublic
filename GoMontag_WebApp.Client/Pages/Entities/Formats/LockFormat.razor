@@ -1,0 +1,165 @@
+﻿@page "/products/view/{productSlug}/formats/{formatHash}/lock"
+@using GoMontag.Shared.Enums
+@inject IProductClientToServerComponentService ProductService
+@inject IFormatClientToServerComponentService FormatService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Admin, Moderator")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@if (formatId == null)
+{
+	@if (productSlug == null || product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@productSlug">@product.Name</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	@if (format.IsLocked)
+	{
+		<h3>Unlock Format</h3>
+	}
+	else
+	{
+		<h3>Lock Format</h3>
+	}
+}
+else
+{
+	@if (productSlug == null || product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@product.Slug">@product.Name</a></li>
+				<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatId">@format.Type @format.Edition</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+	}
+	<PageTitle>Lock Format: @format.Type - @format.Edition for @product!.Name - GoMontag</PageTitle>
+	
+	
+}
+
+<EditForm Model="@format">
+	<div class="form-group">
+		<InputCheckbox id="formatIsLocked" class="form-check-input" @bind-Value="format.IsLocked" />
+		<label class="form-check-label" for="formatIsLocked">Locked</label>
+	</div>
+	@if (format.IsLocked)
+	{
+		<div class="form-group">
+			<label for="formatLockedReason">Lock Reason</label>
+			<InputTextArea id="formatLockedReason" class="form-control" @bind-Value="format.lockedReason" />
+		</div>
+	}
+	</EditForm>
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+	@code {
+	[Parameter]
+	public int? formatId { get; set; }
+	[Parameter]
+	public int? productId { get; set; }
+	[Parameter]
+	public string? formatHash { get; set; }
+	[Parameter]
+	public string? productSlug { get; set; }
+
+	private FormatRequest format = new();
+	private ProductResponseJustCategoryId? product = new();
+
+	private IJSObjectReference? module;
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!string.IsNullOrEmpty(formatHash))
+		{
+			var result = await FormatService.GetFormatByID(formatHash);
+			if (result is not null)
+			{
+				format = new FormatRequest
+				{
+					Type = result.Value.Type,
+					Edition = result.Value.Edition,
+					IsLocked = result.Value.IsLocked,
+					lockedReason = result.Value.lockedReason,
+					CoverImageUrl = result.Value.CoverImageUrl,
+					Slug = result.Value.Slug,
+					ReleaseDate = result.Value.ReleaseDate,
+					EditRequested = result.Value.EditRequested,
+					InformationRequested = result.Value.InformationRequested
+				};
+				product = result.Value.Product;
+				if (format.IsLocked)
+				{
+					await SetPageTitle($"Unlock Format: {format.Type} - {format.Edition} for {product!.Name} - GoMontag");
+				}
+				else
+				{
+					await SetPageTitle($"Lock Format: {format.Type} - {format.Edition} for {product!.Name} - GoMontag");
+				}
+				
+			}
+			else
+			{
+				await CancelEdit();
+			}
+		}
+		else
+		{
+			await CancelEdit();
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await FormatService.LockFormat(formatHash!, format);
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+}

@@ -1,0 +1,218 @@
+﻿@page "/about"
+@using GoMontag_WebApp.Client.Pages.Entities.NewsBlogs
+@using GoMontag_WebApp.Client.Shared.Buttons.Articles
+@inject INewsBlogClientToServerComponentService articleService
+@inject IUserClientToServerComponentService UserService
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+
+<PageTitle>About GoMontag</PageTitle>
+<HeadContent>
+    <link rel="canonical" href="https://www.gomontag.com/about" />
+    <meta name="image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+    <meta name="description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+    <meta name="og:title" content="About GoMontag" />
+    <meta property="og:url" content="https://www.gomontag.com/about" />
+    <meta property="og:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+    <meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+    <meta name="keywords" content="Video Games, Software, Tools, Appliances, Ownership, GoMontag" />
+    @* Twitter Meta Tags *@
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="https://www.gomontag.com/about" />
+    <meta name="twitter:title" content="About GoMontag" />
+    <meta name="twitter:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+    <meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+</HeadContent>
+
+
+<div class="article-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+
+        @if (newsArticle != null && !isLoading)
+        {
+            <div class="article-breadcrumbs-col">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active">@newsArticle.Value.Title</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="article-title-col">
+                <hr />
+                <h1>@newsArticle.Value.Title</h1>
+                @if (!string.IsNullOrWhiteSpace(newsArticle.Value.CoverImageUrl))
+                {
+                    <img src="@newsArticle.Value.CoverImageUrl"
+                         style="max-width: min(300px, 100%); max-height: 300px;"
+                         class="img-thumbnail" />
+                }
+            </div>
+            <div class="article-authors-col">
+                @if (!isLoading)
+                {
+                    @if (newsArticle.Value.AuthorId != newsArticle.Value.ModifierId)
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" onlyShowName="true" />
+                        <p><strong>Lasted Edited By:</strong></p>
+                        <DisplayUserInfo UserId="@editorId" onlyShowName="true" />
+                    }
+                    else
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" />
+                    }
+                    <br />
+                    <p><strong>Last Updated: </strong>@newsArticle.Value.ModifiedDate.ToString("MM/dd/yyyy") at @newsArticle.Value.ModifiedDate.ToShortTimeString()</p>
+                }
+            </div>
+            <AuthorizeView Roles="Admin" Context="authState">
+                <Authorized>
+                    <EditArticleButton articleSlug="@newsArticle.Value.slug" ButtonText="Edit About" />
+                </Authorized>
+            </AuthorizeView>
+            <div class="article-toc">
+                <br />
+                <TableOfContents HTMLContent="@newsArticleHTML" Slug="@newsArticle.Value.slug" isAbout="true"/>
+            </div>
+            <div class="article-body-col">
+                <hr />
+                @((MarkupString)SanitizeHTML(newsArticle.Value.NewsArticle))
+            </div>
+        }
+        else if (isLoading)
+        {
+            <p><strong>Loading Rules Please Wait...</strong></p>
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        }
+        else
+        {
+            <h2>404 Article Not Found</h2>
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+@code {
+    public string articleType { get; set; } = "About";
+
+    private NewsBlogResponse? newsArticle = new NewsBlogResponse();
+
+    private string? authorId { get; set; }
+    private string? editorId { get; set; }
+
+    private string? newsArticleHTML { get; set; }
+
+    private DateOnly articleCreationDate { get; set; }
+    private DateOnly? articleEditedDate { get; set; } = null;
+
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(articleType))
+        {
+            navigationManager.NavigateTo("notfound");
+        }
+
+        var result = await articleService.GetFirstTypeArticle(articleType);
+        if (result == null)
+        {
+            newsArticle = null;
+        }
+        else
+        {
+            newsArticle = result;
+            authorId = result.Value.AuthorId;
+            editorId = result.Value.ModifierId;
+            newsArticleHTML = result.Value.NewsArticle;
+
+            articleCreationDate = DateOnly.FromDateTime(result.Value.CreatedDate);
+            if (result.Value.ModifiedDate != result.Value.CreatedDate)
+            {
+                articleEditedDate = DateOnly.FromDateTime(result.Value.ModifiedDate);
+            }
+        }
+        isLoading = false;
+    }
+
+    private string SanitizeHTML(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+
+        html = SanitizeImageMarkup(html);
+        html = SanitizeIframe(html);
+
+        return html;
+    }
+
+    private string SanitizeImageMarkup(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+        // Remove width and height attributes
+        html = Regex.Replace(
+            html,
+            @"\s*(height)\s*=\s*[""'][^""']*[""']",
+            "",
+            RegexOptions.IgnoreCase);
+        // Strip width/height (and min/max variants) from the style attribute
+        html = Regex.Replace(
+            html,
+            @"(style\s*=\s*[""'])([^""']*)([""'])",
+            m =>
+            {
+                var cleaned = Regex.Replace(
+                    m.Groups[2].Value,
+                    @"(^|;)\s*(width|height|min-width|max-width|min-height|max-height)\s*:[^;]*",
+                    "",
+                    RegexOptions.IgnoreCase);
+                return m.Groups[1].Value + cleaned.Trim(';', ' ') + m.Groups[3].Value;
+            },
+            RegexOptions.IgnoreCase);
+        return html;
+    }
+
+    private string SanitizeIframe(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+        var iframePattern = @"<iframe\s([^>]*)>";
+        var replacement = @"<div class=""iframe-container"" style=""position: relative; width: 100%; max-width: 560px; max-height: 315px;
+		padding-bottom: 265px; padding-top:50px;"";><iframe $1>";
+
+        html = Regex.Replace(html, iframePattern, replacement, RegexOptions.IgnoreCase);
+
+        html = Regex.Replace(html, @"</iframe>", @"</iframe></div>", RegexOptions.IgnoreCase);
+
+        html = NormalizeIframeAttributes(html);
+
+        return html;
+    }
+
+    private string NormalizeIframeAttributes(string htmlContent)
+    {
+        // Any space between <iframe where there is 0 or more > whether that would be in the beginning of a paragraph or otherwise
+        string pattern = @"<iframe\s+([^>]*)>";
+        return Regex.Replace(htmlContent, pattern, match =>
+        {
+            string tagContent = match.Groups[1].Value;
+            //Any space betwen style= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*style=""[^""]*""", "", RegexOptions.IgnoreCase);
+            //Any space betwen width= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*width=""[^""]*""", "", RegexOptions.IgnoreCase);
+            //Any space betwen height= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*height=""[^""]*""", "", RegexOptions.IgnoreCase);
+
+            return $@"<iframe width=""100%"" height=""315px"" style=""position: absolute; top: 0; left: 0; width: 100%; height: 315px;""{tagContent}>";
+        }, RegexOptions.IgnoreCase);
+    }
+
+    private void EditArticle(string slug)
+    {
+        navigationManager.NavigateTo($"/site-news/article/{slug}/edit");
+    }
+
+}

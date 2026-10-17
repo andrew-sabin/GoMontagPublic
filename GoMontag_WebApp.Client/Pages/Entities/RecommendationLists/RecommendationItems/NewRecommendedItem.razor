@@ -1,0 +1,325 @@
+﻿@page "/products/view/{Slug}/recommend"
+@inject IProductClientToServerComponentService productService
+@inject IRecommendationListClientToServerComponentService recommendationListService
+@inject IRecommendationItemClientToServerComponentService recommendationItemService
+@inject IUserClientToServerComponentService UserComponentService
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject IAuthClientToServerComponentService authService
+@inject NavigationManager navigationManager
+@inject IJSRuntime JSRuntime
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@if (isLoading == false && product != null)
+{
+    <div class="card my-4">
+        <div class="card-header">
+            <a href="products/view/@product.Value.Slug">
+                <h5>@product.Value.Name</h5>
+            </a>
+        </div>
+        @* card header end *@
+        <div class="card-body">
+            <div class="product-container">
+                <div class="product-image-column">
+                    @if (string.IsNullOrEmpty(@product.Value.CoverImageURL))
+                    {
+                        <p>
+                            <a href="/products/view/@product.Value.Slug">
+                                <img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+                                     class="img-thumbnail"
+                                     style="max-width: min(200px, 100%); max-height: 300px;"
+                                     alt="Missing Image Picture Created By: Khanh Nguyen" />
+                            </a>
+                        </p>
+
+                    }
+                    else
+                    {
+                        <p>
+                            <a href="/products/view/@product.Value.Slug">
+                                <img src="@product.Value.CoverImageURL"
+                                     style="max-width: min(200px, 100%); max-height: 200px;"
+                                     class="img-thumbnail" />
+                            </a>
+                        </p>
+                    }
+                </div>
+                @* end of product image column *@
+                <div class="product-details-column">
+                    <p><strong>@product.Value.Category.Name</strong></p>
+                    @if (string.IsNullOrEmpty(product.Value.Category.CreatorsTitle))
+                    {
+                        <p><strong>Created By:</strong> @product.Value.Creators</p>
+                    }
+                    else
+                    {
+                        <p><strong>@product.Value.Category.CreatorsTitle:</strong> @product.Value.Creators</p>
+                    }
+                    <p><strong>For Ages:</strong> @product.Value.ContentRating+</p>
+                    <p><strong>First Released:</strong> @product.Value.ProductLaunchDate</p>
+
+                    @if (product.Value.IsAIAssisted)
+                    {
+                        <p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+                    }
+                    @if (product.Value.ForMatureAudiences)
+                    {
+                        <p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+                    }
+                </div>
+                @* end of product details column*@
+                <div class="product-description-row">
+                    <p><strong>Product Description:</strong></p>
+                    <p>@product.Value.Description</p>
+                </div>
+                @* end of product description row *@
+            </div>
+            @* end of product container *@
+        </div>
+        @* end of card body *@
+    </div>
+}
+
+
+@if (isLoading == false && hasLists == false)
+{
+    <h3>No Recommend Lists Found Please Create A New One</h3>
+    <button class="btn btn-primary" @onclick="@(() => CreateNewRecommendationList(UserName!))">Create New Recommendation List</button>
+}
+else if (isLoading == false && hasLists == true)
+{
+    <PageTitle>Recommending @product.Value.Name - GoMontag</PageTitle>
+    <h3>Create a New Recommended Item</h3>
+    <EditForm Model="recommendItem">
+        <div>
+            <label for="reccList"> Recommend List</label>
+            <InputSelect id="reccList" class="form-select" @bind-Value="recommendItem.RecommendationListId">
+                @foreach (var list in userLists)
+                {
+                    <option value="@list.Id">@list.Name</option>
+                }
+            </InputSelect>
+        </div>
+        <div>
+            <label for="reccNotes"> Notes For Recommendation </label>
+            <InputTextArea id="reccNotes" class="form-control" @bind-Value="recommendItem.Notes"/>
+            <ValidationMessage For="@(() => recommendItem.Notes)" />
+        </div>
+    </EditForm>
+
+    <button class="btn btn-primary" type="submit" @onclick="HandleValidSubmit">Add Item to Recommendations</button>
+}
+
+
+
+
+@code {
+    [Parameter]
+    public string? Slug { get; set; }
+
+    private string? UserName { get; set; } = string.Empty;
+    private ProductResponse? product = new();
+    private List<ListResponse> userLists = new List<ListResponse>();
+
+    private ListResponse? checkList = new();
+    private List<RecommendedItemResponse> checkItems = new List<RecommendedItemResponse>();
+
+    private RecommendedItemRequest recommendItem = new();
+
+    private bool hasLists = false;
+    private bool isLoading = true;
+
+    private IJSObjectReference? module;
+
+    private async Task SetPageTitle(string title)
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("setTitle", title);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+        if (serverUserRole.Count == 0)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+        if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var currentUserName = user.Identity!.Name;
+        if (string.IsNullOrEmpty(currentUserName))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        else
+        {
+            var listsResponse = await recommendationListService.GetRecommendListsByUserName(currentUserName);
+            if (listsResponse.Count <= 0 || listsResponse == null)
+            {
+                hasLists = false;
+            }
+            else
+            {
+                UserName = currentUserName;
+                hasLists = true;
+                userLists = listsResponse;
+            }
+        }
+        module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+    }
+
+    protected async override Task OnParametersSetAsync()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (string.IsNullOrEmpty(Slug))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var prodResponse = await productService.GetProductBySlug(Slug!);
+        if (prodResponse == null)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        else
+        {
+            product = prodResponse;
+        }
+        await SetPageTitle($"Recommending {product.Value.Name} - GoMontag");
+        isLoading = false;
+    }
+
+    private async void CreateNewRecommendationList(string UserName)
+    {
+        navigationManager.NavigateTo($"/users/{UserName}/recommend/new");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+        if (serverUserRole == null || serverUserRole.Count == 0)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+        if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        checkList = await recommendationListService.GetRecommendListById(GenerateListHash(recommendItem.RecommendationListId));
+        if(checkList == null)
+        {
+            navigationManager.NavigateTo($"notfound");
+        }
+        else
+        {
+            checkItems = await recommendationItemService.GetItemsByRecommendationList(GenerateListHash(recommendItem.RecommendationListId));
+            if(checkItems.Count() > 0)
+            {
+                foreach(var item in checkItems)
+                {
+                    if(item.ProductId == product!.Value.Id)
+                    {
+                        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Recommendation was found in {checkList.Value.Name}. \nWould you like to replace it?");
+                        if (confirmed)
+                        {
+                            recommendItem.Order = item.Order;
+                            recommendItem.ProductId = product!.Value.Id;
+                            recommendItem.ProductName = product.Value.Name;
+                            if (product.Value.CoverImageURL == null)
+                            {
+                                recommendItem.ProductCoverImg = "";
+                            }
+                            else
+                            {
+                                recommendItem.ProductCoverImg = product.Value.CoverImageURL;
+                            }
+                            await recommendationItemService.UpdateItem(item.Id, recommendItem);
+                            var listHashed = GenerateListHash(recommendItem.RecommendationListId);
+                            navigationManager.NavigateTo($"/recommend/{listHashed}");
+                            return;
+                        }
+                        else
+                        {
+                            var listHashed = GenerateListHash(recommendItem.RecommendationListId);
+                            navigationManager.NavigateTo($"/recommend/{listHashed}");
+                            return;
+                        }
+                    }
+                }
+                recommendItem.Order = checkItems.Count();
+                recommendItem.ProductId = product!.Value.Id;
+                recommendItem.ProductName = product.Value.Name;
+                if (product.Value.CoverImageURL == null){
+                    recommendItem.ProductCoverImg = "";
+                }
+                else
+                {
+                    recommendItem.ProductCoverImg = product.Value.CoverImageURL;
+                }
+                await recommendationItemService.CreateNewItem(recommendItem);
+                var listHash = GenerateListHash(recommendItem.RecommendationListId);
+                navigationManager.NavigateTo($"/recommend/{listHash}");
+            }
+            else
+            {
+                recommendItem.Order = checkItems.Count();
+                recommendItem.ProductId = product!.Value.Id;
+                recommendItem.ProductName = product.Value.Name;
+                if (product.Value.CoverImageURL == null)
+                {
+                    recommendItem.ProductCoverImg = "";
+                }
+                else
+                {
+                    recommendItem.ProductCoverImg = product.Value.CoverImageURL;
+                }
+                await recommendationItemService.CreateNewItem(recommendItem);
+                var listHash = GenerateListHash(recommendItem.RecommendationListId);
+                navigationManager.NavigateTo($"recommend/{listHash}");
+            }
+        }
+
+    }
+
+    public static string GenerateListHash(int id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(id);
+        return hash;
+    }
+}

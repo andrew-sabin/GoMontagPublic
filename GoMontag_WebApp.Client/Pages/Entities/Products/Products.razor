@@ -1,0 +1,253 @@
+﻿@page "/products/all/"
+@page "/products/{CategorySlug}/"
+@using System.Text.Json
+@using GoMontag_WebApp.Client.Pages.Entities.Products.ProductSearchResultsComponents
+@using GoMontag_WebApp.Client.Shared
+@inject IProductClientToServerComponentService ProductService
+@inject ICategoryClientToServerComponentService CategoryService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<div class="products-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		<div class="category-display">
+			@if (CategoryId > 0)
+			{
+				<PageTitle>Product Search Searching in @productCategory.Name - GoMontag</PageTitle>
+				<h2>@productCategory.Name</h2>
+				<h3>@productCategory.Description</h3>
+			}
+			else
+			{
+				<PageTitle>Product Search - GoMontag</PageTitle>
+				<h2>Products</h2>
+				<h3>All Categories</h3>
+			}
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item active">Products Search</li>
+				</ol>
+			</nav>
+		</div>
+
+		<div class="product-search">
+			<Search ProductName="@ProductQuery" CategoryId="CategoryId" />
+			<p><small>Please wait for the search bar to appear.</small></p>
+			<br/>
+			@if (!String.IsNullOrEmpty(ProductQuery))
+			{
+				<p>Searching for: "@ProductQuery"</p>
+			}
+		</div>
+
+		
+
+		<AuthorizeView Roles="Admin, Moderator, AlphaTester, User" Context="authState">
+			<Authorized>
+				<button class="btn btn-primary" mb-2 @onclick="CreateProduct">
+					Create Product
+				</button>
+			</Authorized>
+		</AuthorizeView>
+
+
+		<div class="top-query-btns">
+			<ProductPageButtons CategorySlug="@CategorySlug" PageAmount="PageAmount" 
+				productAmount="productAmount" ProductQuery="@ProductQuery" QueryPage="QueryPage" />
+			<br />
+		</div>
+		<p>Currently on Page: @QueryPage</p>
+		@if (productAmount > 0 && isLoading == false)
+		{
+			@foreach (var item in products)
+			{
+				<ProductCardComponent item="item" />
+			}
+		}
+		else if (isLoading)
+		{
+			
+		}
+		else
+		{
+			<p>End of results.</p>
+		}
+		<p>Currently on Page: @QueryPage</p>
+		<div class="bottom-query-btns">
+			<ProductPageButtons CategorySlug="@CategorySlug" PageAmount="PageAmount"
+								  productAmount="productAmount" ProductQuery="@ProductQuery" QueryPage="QueryPage" />
+			<br />
+		</div>
+		
+	</div>
+	<div class="right-column"></div>
+</div>
+
+
+
+
+
+
+
+@code {
+
+	[SupplyParameterFromQuery (Name="title")]
+	private string? ProductQuery { get; set; }
+
+	[Parameter]
+	public string? CategorySlug { get; set; }
+
+	private int CategoryId { get; set; }
+
+	[SupplyParameterFromQuery(Name = "page")]
+	private int QueryPage { get; set; } = 1;
+
+	private bool isLoading = true;
+
+	const int PageAmount = 15;
+
+	private List<ProductResponse> products = new List<ProductResponse>();
+	private CategoryResponse productCategory { get; set; } = new();
+
+	private int productAmount { get; set; }
+	// private bool hasSearched = false;
+	int productId;
+
+	private IJSObjectReference? module;
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!String.IsNullOrEmpty(CategorySlug))
+		{
+			var catresult = await CategoryService.GetCategoryBySlug(CategorySlug);
+			if (catresult != null)
+			{
+				productCategory = catresult;
+				CategoryId = productCategory.Id;
+				try
+				{
+					await ShowPage();
+					isLoading = false;
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Error loading products: {ex.Message}");
+					isLoading = false;
+				}
+			}
+			await SetPageTitle($"Product Search: {ProductQuery} within {productCategory.Name} - GoMontag");
+		}
+		else
+		{
+			if (!String.IsNullOrEmpty(ProductQuery))
+			{
+				CategoryId = 0;
+				try
+				{
+					await ShowPage();
+					isLoading = false;
+				}
+				catch (Exception ex)
+				{
+					System.Diagnostics.Debug.WriteLine($"Error loading products: {ex.Message}");
+					isLoading = false;
+				}
+				await SetPageTitle($"Product Search: {ProductQuery} - GoMontag");
+			}
+		}
+	}
+
+	private void ShowFormats(int id)
+	{
+		if (productId == id)
+		{
+			return;
+		}
+		productId = id;
+		StateHasChanged();
+	}
+
+	private async Task ShowPage()
+	{
+		var results = await ProductService.SearchProducts(ProductQuery!, CategoryId, QueryPage, PageAmount);
+		if (results != null && results.Count > 0)
+		{
+			products = results;
+			productAmount = products.Count();
+		}
+	}
+
+	private async Task FirstPage()
+	{
+		if (CategoryId > 0 && !string.IsNullOrEmpty(CategorySlug))
+		{
+			NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page=1", true);
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page=1", true);
+		}
+	}
+
+	private async Task NextPage()
+	{
+		if (productAmount == PageAmount)
+		{
+			if (CategoryId > 0 && !string.IsNullOrEmpty(CategorySlug))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page={QueryPage+1}",true);
+			}
+			else
+			{
+				NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page={QueryPage+1}", true);
+			}
+		}
+	}
+
+	private async Task PrevPage()
+	{
+		if (QueryPage > 1)
+		{
+			if (CategoryId > 0 && !string.IsNullOrEmpty(CategorySlug))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page={QueryPage-1}",true);
+			}
+			else
+			{
+				NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page={QueryPage-1}", true);
+			}
+		}
+
+	}
+
+	private void CreateProduct()
+	{
+		NavigationManager.NavigateTo("/products/create");
+	}
+
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+
+	private void ViewProduct(string slug)
+	{
+		Console.WriteLine($"Viewing Product {slug}");
+		NavigationManager.NavigateTo($"/products/view/{slug}/");
+	}
+
+}

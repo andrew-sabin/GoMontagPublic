@@ -1,0 +1,197 @@
+﻿
+using GoMontag.Shared.Entities;
+using GoMontag.Shared.Models.Format;
+using GoMontag.Shared.Models.Product;
+using System.Net.Http.Json;
+
+namespace GoMontag_WebApp.Client.ClientComponentServices
+{
+    public class ProductClientToServerComponentService : IProductClientToServerComponentService
+    {
+        private readonly HttpClient _httpClient;
+        
+        public List<ProductResponse> Products { get; set; } = new List<ProductResponse>();
+        public event Action? OnChange;
+
+        public ProductClientToServerComponentService(IHttpClientFactory httpClientFactory)
+        {
+            _httpClient = httpClientFactory.CreateClient("ComponentApi");
+        }
+
+        public async Task CreateProduct(ProductRequest product)
+        {
+            var createRequest = new ProductCreateRequest
+            {
+                Name = product.Name,
+                Creators = product.Creators,
+                ProductLaunchDate = product.ProductLaunchDate,
+                IsLocked = product.IsLocked,
+                CoverImageURL = product.CoverImageURL,
+                ContentRating = product.ContentRating,
+                Description = product.Description,
+                DescriptionSource = product.DescriptionSource,
+                IsAIAssisted = product.IsAIAssisted,
+                AIAssistsWith = product.AIAssistsWith,
+                AIAssistsSource = product.AIAssistsSource,
+                ForMatureAudiences = product.ForMatureAudiences,
+                MatureAudienceReason = product.MatureAudienceReason,
+                CategoryId = product.CategoryId,
+                CategoryName = product.CategoryName,
+                HasIssue = product.HasIssue,
+                Issue = product.Issue,
+                IssueURL = product.IssueURL
+            };
+            await _httpClient.PostAsJsonAsync("api/product", createRequest);
+        }
+
+        public async Task DeleteProduct(int id)
+        {
+            await _httpClient.DeleteAsync($"api/product/{id}");
+        }
+
+        public async Task<List<ProductResponse>> GetAllProducts()
+        {
+            return await _httpClient.GetFromJsonAsync<List<ProductResponse>>("api/product");
+        }
+
+        public async Task<ProductResponse?> GetProductById(int id)
+        {
+            return await _httpClient.GetFromJsonAsync<ProductResponse>($"api/product/{id}");
+        }
+
+        public async Task UpdateProduct(int id, ProductRequest product)
+        {
+            var updateRequest = new ProductUpdateRequest
+            {
+                Name = product.Name,
+                CoverImageURL = product.CoverImageURL,
+                Creators = product.Creators,
+                IsLocked = product.IsLocked,
+                ProductLaunchDate = product.ProductLaunchDate,
+                ContentRating = product.ContentRating,
+                Description = product.Description,
+                DescriptionSource = product.DescriptionSource,
+                IsAIAssisted = product.IsAIAssisted,
+                AIAssistsWith = product.AIAssistsWith,
+                AIAssistsSource = product.AIAssistsSource,
+                ForMatureAudiences = product.ForMatureAudiences,
+                MatureAudienceReason = product.MatureAudienceReason,
+                CategoryId = product.CategoryId,
+                CategoryName = product.CategoryName,
+                HasIssue = product.HasIssue,
+                Issue = product.Issue,
+                IssueURL = product.IssueURL
+            };
+            await _httpClient.PutAsJsonAsync($"api/product/{id}", updateRequest);
+        }
+
+        public async Task GetProductsByCategoryId(int categoryId)
+        {
+            List<ProductResponse>? result = null;
+            if (categoryId <= 0)
+            {
+                result = await _httpClient.GetFromJsonAsync<List<ProductResponse>>("api/product");
+            }
+            else
+            {
+                result = await _httpClient.GetFromJsonAsync<List<ProductResponse>>($"api/product/category/{categoryId}");
+            }
+
+            if (result is not null)
+            {
+                Products = result;
+                OnChange?.Invoke();
+            }
+            else
+            {
+                Products = new List<ProductResponse>();
+            }
+        }
+
+        public async Task<ProductResponseJustCategoryId?> GetProductByIdJustCategoryId(int id)
+        {
+            return await _httpClient.GetFromJsonAsync<ProductResponseJustCategoryId?>($"api/product/{id}");
+        }
+
+        public async Task<List<ProductResponse>> SearchProducts(string searchTerm, int? categoryId, int pageNumber, int pageSize)
+        {
+            var results = await _httpClient.GetFromJsonAsync<List<ProductResponse>>($"api/product/search/{categoryId}/{searchTerm}&pageNumber={pageNumber}?pageSize={pageSize}");
+            if (results is null)
+            {
+                return new List<ProductResponse>();
+            }
+            return results;
+        }
+
+        public async Task<ProductResponse?> GetProductBySlug(string slug)
+        {
+            var response = await _httpClient.GetAsync($"api/product/slug/{slug}");
+            if (response.IsSuccessStatusCode)
+            {
+                var data =  await response.Content.ReadFromJsonAsync<ProductResponse>();
+                return data;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public async Task LockProduct(int id, ProductRequest product)
+        {
+            var lockRequest = new ProductLockRequest
+            {
+                IsLocked = product.IsLocked,
+                lockedReason = product.lockedReason
+            };
+            await _httpClient.PatchAsJsonAsync($"api/Product/lock/{id}", lockRequest);
+        }
+
+        public async Task<ProductResponseJustCategoryId?> GetProductBySlugJustCategoryId(string slug)
+        {
+            return await _httpClient.GetFromJsonAsync<ProductResponseJustCategoryId?>($"api/product/slug/{slug}");
+        }
+
+        public async Task<List<ProductResponse>> GetRecentProductsByCategory(int categoryId, int pageNumber, int pageSize)
+        {
+            var response = await _httpClient.GetFromJsonAsync<List<ProductResponse>?>($"api/Product/category/recent/{categoryId}?pageNumber={pageNumber}&pageSize={pageSize}");
+            if (response == null)
+                return new List<ProductResponse>();
+            return response;
+        }
+
+        public async Task<List<ProductResponse>> GetAllRecentProducts(int pageNumber, int pageSize)
+        {
+            var response = await _httpClient.GetFromJsonAsync<List<ProductResponse>>($"/api/Product/recent?pageNumber={pageNumber}&pageSize={pageSize}");
+            if (response == null)
+                return new List<ProductResponse>();
+            return response;
+        }
+
+        public async Task<int> CountAllProducts()
+        {
+            var response = await _httpClient.GetAsync("odata/Product/$count");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var countString = await response.Content.ReadAsStringAsync();
+
+                return int.Parse(countString);
+            }
+            return 0;
+        }
+
+        public async Task<int> CountUserAddedProducts(string userId)
+        {
+            var response = await _httpClient.GetAsync($"odata/Product/$count?filter=CreatorId eq '{userId}'");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var countString = await response.Content.ReadAsStringAsync();
+
+                return int.Parse(countString);
+            }
+            return 0;
+        }
+    }
+}

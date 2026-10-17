@@ -1,0 +1,121 @@
+﻿@page "/format-types"
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ICategoryClientToServerComponentService CategoryService
+@inject IFormatTypeClientToServerComponentService formatTypeService
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active">Format Types</li>
+    </ol>
+</nav>
+
+<button class="btn btn-primary" mb-2 @onclick="CreateFormatType">
+    <i class="bi bi-plus-square"></i> Create Format Type
+</button>
+<PageTitle>Format Types - GoMontag</PageTitle>
+<h3>Format Types List</h3>
+<div class="format-type-search-results">
+    <div class="category-select">
+        <div class="search-categories">
+            <select class="form-select" @bind="selectedCategoryID">
+                <option value="0">Select a Category</option>
+                @foreach (var category in Categories)
+                {
+                    <option value="@category.Id">@category.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="format-type-quickgrid">
+        <QuickGrid Items="filteredFormatTypes" Pagination="pagination">
+            <TemplateColumn>
+                <ChildContent Context="ft">
+                    @if (string.IsNullOrEmpty(ft.ImageUrl))
+                    {
+                        <a href="@($"format-types/{CreateIDHash(ft.Id)}/edit")">
+                            <img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+                                 class="img-thumbnail"
+                                 style="max-width: min(50px, 100%); max-height: 75px;"
+                                 alt="Missing Image Picture Created By: Khanh Nguyen" />
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="@($"format-types/{CreateIDHash(ft.Id)}/edit")"><img src="@ft.ImageUrl" class="img-thumbnail" style="max-width: min(50px, 100%); max-height: 75px;" /></a>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property=" ft => ft.Name" Sortable="true" />
+            <PropertyColumn title="Category Name" Property=" ft=> ft.Category!.Name" />
+            <PropertyColumn Property=" ft => ft.Description" />
+            <TemplateColumn Context="ft">
+                <a href="@($"format-types/{CreateIDHash(ft.Id)}/edit")">Edit Format</a>
+            </TemplateColumn>
+        </QuickGrid>
+
+        <Paginator State="@pagination" />
+    </div>
+</div>
+
+
+
+
+@code {
+    private int selectedCategoryID;
+
+    private bool isLoading = true;
+
+    private List<FormatTypeResponse>? formatTypes = new List<FormatTypeResponse>();
+    private List<CategoryResponse> Categories { get; set; } = new List<CategoryResponse>();
+
+    private IQueryable<FormatTypeResponse>? queryableFormatTypes;
+    private IQueryable<FormatTypeResponse>? filteredFormatTypes => queryableFormatTypes?.Where(ft => ft.CategoryId == selectedCategoryID);
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Categories = await CategoryService.GetAllProductCategories();
+        await LoadFormatTypes();
+        isLoading = false;
+    }
+
+    private async Task LoadFormatTypes()
+    {
+        try
+        {
+            var response = await formatTypeService.GetAllFormatTypes();
+            queryableFormatTypes = response.AsQueryable();
+            
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading categories: {ex.Message}");
+        }
+    }
+
+    private void CreateFormatType()
+    {
+        NavigationManager.NavigateTo("/format-types/create");
+    }
+    
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+}
+
+

@@ -1,0 +1,121 @@
+﻿@page "/products/view/{productSlug}/formats/{formatHash}/request"
+@inject IProductClientToServerComponentService ProductService
+@inject IFormatClientToServerComponentService FormatService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Admin, Moderator")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<h3>Request New Format Information</h3>
+@if(!isLoading)
+{
+	@if (productSlug == null || product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+		<PageTitle></PageTitle>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@productSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">Editing Format</li>
+			</ol>
+		</nav>
+		<PageTitle>Requesting Information For @product.Value.Name with @format.Type : @format.Edition - GoMontag</PageTitle>
+	}
+	<EditForm Model="format">
+		<div class="form-group">
+			
+			<InputCheckbox id="formatEditRequest" class="form-check-input" @bind-Value="format.EditRequested" />
+			<label for="formatEditRequest">More Information Requested?</label>
+		</div>
+		@if (format.EditRequested)
+		{
+			<div class="form-group">
+				<label for="formatInformationRequest">Requesting More Information About:</label>
+				<InputTextArea id="formatInformationRequest" class="form-control" @bind-Value="format.InformationRequested"/>
+			</div>
+		}
+	</EditForm>
+	<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+	<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+}
+
+
+@code {
+	[Parameter]
+	public string? formatHash { get; set; }
+	[Parameter]
+	public string? productSlug { get; set; }
+
+	private ProductResponse? product = new();
+	private FormatRequest format = new();
+
+	private bool isLoading = true;
+
+	private IJSObjectReference? module;
+
+	protected override async Task OnInitializedAsync()
+	{
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+	}
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!string.IsNullOrEmpty(formatHash))
+		{
+			var result = await FormatService.GetFormatByID(formatHash);
+			if (result != null && result.Value.Product != null)
+			{
+				product = await ProductService.GetProductById(result.Value.Product.Id);
+				format = new FormatRequest
+				{
+					FormatTypeId = result.Value.FormatTypeId,
+					Type = result.Value.Type,
+					Edition = result.Value.Edition,
+					IsLocked = result.Value.IsLocked,
+					lockedReason = result.Value.lockedReason,
+					CoverImageUrl = result.Value.CoverImageUrl,
+					Slug = result.Value.Slug,
+					ReleaseDate = result.Value.ReleaseDate,
+					EditRequested = result.Value.EditRequested,
+					InformationRequested = result.Value.InformationRequested,
+					ProductId = product!.Value.Id
+				};
+				await SetPageTitle($"Request Information For: {format.Type} - {format.Edition} for {product!.Value.Name} - GoMontag");
+				isLoading = false;
+			}
+		}
+		else
+		{
+			NavigationManager.NavigateTo("not found");
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await FormatService.RequestInformationForFormat(formatHash!, format);
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+
+
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+	}
+}

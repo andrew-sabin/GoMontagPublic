@@ -1,0 +1,10 @@
+﻿<AuthorizeView>
+	<NotAuthorized>
+		<strong><a href="register"><i class="bi bi-r-square"></i> Register</a></strong>
+		<strong><a href="login"><i class="bi bi-door-open-fill"></i> Login</a></strong>
+	</NotAuthorized>
+	<Authorized> 
+		<strong><a href="/users/@context.User.Identity.Name"><i class="bi bi-person-square"></i> @context.User.Identity!.Name's Page</a></strong>
+		<strong><a href="logout"><i class="bi bi-door-closed-fill"></i> Logout</a></strong>
+	</Authorized>
+</AuthorizeView>

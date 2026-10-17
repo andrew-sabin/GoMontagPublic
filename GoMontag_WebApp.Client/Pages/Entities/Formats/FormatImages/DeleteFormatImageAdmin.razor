@@ -1,0 +1,106 @@
+﻿@inject IFormatClientToServerComponentService FormatService
+@inject IFormatImageClientToServerComponentService FormatImageService
+@page "/formats/{formatHash}/images/{ImageHash}/delete"
+@using GoMontag_WebApp.Client.Shared.Buttons.FormatImages
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles ="Admin, Moderator")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+
+@if (!isLoading && formatImage != null)
+{
+    <div class="img-details">
+        <h2>Used In <a href="@($"/products/view/{product!.Slug}/formats/{FormatHash}")">@product!.Name : @format.Value.Type - @format.Value.Edition</a> </h2>
+        <br />
+        <h3>@formatImage.ImageName</h3>
+        <a href="@formatImage.ImageUrl"><img src="@formatImage.ImageUrl" alt="@formatImage.AltText" width="@formatImage.Width"/></a>
+        <br />
+    </div>
+    <div class="img-info">
+        <h3>Uploaded by: <a href="/users/Andy" target="_blank">@formatImage.UserName</a></h3>
+        <h4>Uploaded: @formatImage.CreatedDate UTC</h4>
+        @if (!string.IsNullOrEmpty(formatImage.AltText))
+        {
+            <h4>Alt Text: @formatImage.AltText</h4>
+        }
+    </div>
+    <div class="delete-button">
+        <AuthorizeView Roles="Admin" Context="authState">
+            <Authorized>
+                <button class="btn btn-danger" @onclick="@(() => DeleteFormatImg(ImageHash))">
+                    Delete Image
+                </button>
+            </Authorized>
+        </AuthorizeView>
+        
+    </div>
+    <br />
+
+}
+
+
+@code {
+    [Parameter]
+    public string? FormatHash { get; set; }
+    [Parameter]
+    public string? ImageHash { get; set; }
+
+    private FormatResponse? format { get; set; }
+    private FormatImageResponse? formatImage { get; set; }
+    private ProductResponseJustCategoryId? product { get; set; }
+
+    private bool isLoading = true;
+
+    private IJSObjectReference? module;
+
+    private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+    protected override async Task OnInitializedAsync()
+    {
+        module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+
+        if (FormatHash != null)
+        {
+            var result = await FormatService.GetFormatByID(FormatHash);
+            if (result == null)
+            {
+                format = null;
+                formatImage = null;
+                await SetPageTitle($"Image Not Found - GoMontag");
+            }
+            else
+            {
+                format = result;
+                if (!string.IsNullOrEmpty(ImageHash))
+                {
+                    var formatResult = await FormatImageService.GetFormatImageById(ImageHash);
+                    if (formatResult == null)
+                    {
+                        formatImage = null;
+                    }
+                    else
+                    {
+                        formatImage = formatResult;
+                        product = format.Value.Product;
+                        await SetPageTitle($"Deleting: {formatImage.ImageName} - GoMontag");
+                    }
+                }
+            }
+        }
+        isLoading = false;
+    }
+    private async Task DeleteFormatImg(string imageHash)
+    {
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this image?\n This will Not Delete the image off the server just the entity surrounding the image.");
+        if (confirmed)
+        {
+            await FormatImageService.DeleteFormatImage(imageHash);
+            NavigationManager.NavigateTo($"/products/view/{product.Slug}/formats/{FormatHash}");
+        }
+    }
+}

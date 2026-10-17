@@ -1,0 +1,51 @@
+﻿@inject IProductClientToServerComponentService productService
+@inject IFormatClientToServerComponentService formatService
+@if(isLoading == false)
+{
+    <div class="message">
+        <p><strong>I'm looking for anyone who wants to contribute products and format articles.</strong></p>
+        <p><strong>Please feel free to <a href="/register">Register</a> an account and contribute!</strong></p>
+    </div>
+    <div class="product-and-format-counter">
+        <div class="total-products">
+            <h4><strong><a href="/products/all/recent/?page=1" style="">@productCount</a></strong></h4>
+            <p><strong>Total Products</strong></p>
+        </div>
+        <div class="total-formats">
+            <h4><strong>@formatCount</strong></h4>
+            <p><strong>Total Format Articles</strong></p>
+        </div>
+        <div class="total-requested-formats">
+            <h4><strong><a href="/formats/info-requested">@formatEditReqCount</a></strong></h4>
+            <p><strong><a href="/formats/info-requested">Articles Requesting More Information</a></strong></p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="product-count" aria-hidden="true">
+        <p><span class="placeholder col-6"></span></p>
+    </div>
+    <div class="format-count" aria-hidden="true">
+        <p><span class="placeholder col-6"></span></p>
+    </div>
+}
+
+
+@code {
+    private int productCount = 0;
+    private int formatCount = 0;
+    private int formatEditReqCount = 0;
+
+    private bool isLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        productCount = await productService.CountAllProducts();
+        formatCount = await formatService.CountAllFormats();
+        formatEditReqCount = await formatService.CountAllInformationRequestedFormats();
+        isLoading = false;
+
+    }
+
+}

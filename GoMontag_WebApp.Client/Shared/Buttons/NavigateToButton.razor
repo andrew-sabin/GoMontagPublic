@@ -1,0 +1,21 @@
+﻿@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<button class="btn btn-primary" @onclick="@(() => NavigateToPage(productSlug))">
+    @ButtonText
+</button>
+
+@code {
+    [Parameter]
+    required public string productSlug { get; set; }
+    [Parameter]
+    required public string? ButtonText { get; set; }
+
+
+    private void NavigateToPage(string productSlug)
+    {
+        NavigationManager.NavigateTo(productSlug);
+    }
+}
+
+

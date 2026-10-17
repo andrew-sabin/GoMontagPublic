@@ -1,0 +1,728 @@
+﻿@page "/products/view/{productSlug}/formats/create"
+@page "/products/view/{productSlug}/formats/{formatHash}/edit"
+@using GoMontag.Shared.Enums
+@inject IFormatClientToServerComponentService FormatService
+@inject IFormatTypeClientToServerComponentService FormatTypeService
+@inject IProductClientToServerComponentService ProductService
+@inject IFormatRevisionClientToServerComponentService FormatRevisionService
+@inject IUserClientToServerComponentService UserComponentService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject LinkProcessor _linkProcessor
+@using Syncfusion.Blazor.Inputs
+@using System.Text.Json
+@using System.ComponentModel.DataAnnotations
+@using Syncfusion.Blazor.DropDowns
+@attribute [Authorize(Roles ="Admin, Moderator, AlphaTester, User")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+
+<div class="format-page-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+@if (isLoading)
+{
+	<p><strong>Loading In Format Information Please Wait...</strong></p>
+	<div class="spinner-border" role="status">
+		<span class="visually-hidden">Loading...</span>
+	</div>
+
+	
+}else{
+	@if (formatId == null)
+	{
+		@if (productSlug == null || product == null)
+		{
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item"><a href="/products">Products</a></li>
+					<li class="breadcrumb-item">Unknown</li>
+					<li class="breadcrumb-item active">Unknown</li>
+				</ol>
+			</nav>
+		}
+		else
+		{
+			<PageTitle>Create a New Format for @product.Value.Name - GoMontag</PageTitle>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item"><a href="/products">Products</a></li>
+					<li class="breadcrumb-item"><a href="/products/view/@productSlug">@product.Value.Name</a></li>
+					<li class="breadcrumb-item active">Creating a New Format</li>
+				</ol>
+			</nav>
+		}
+		<h3>Create Format</h3>
+	}
+	else
+	{
+		@if (productSlug == null || product == null)
+		{
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item">Unknown</li>
+					<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatHash">@format.Type @format.Edition</a></li>
+					<li class="breadcrumb-item active">Editing Format</li>
+				</ol>
+			</nav>
+		}
+		else
+		{
+			<PageTitle>GoMontag: Editing @format.Type - @format.Edition for @product.Value.Name </PageTitle>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item"><a href="/products/view/@product.Value.Slug">@product.Value.Name</a></li>
+					<li class="breadcrumb-item active"><a href="/products/view/@productSlug/formats/@formatHash">@format.Type @format.Edition</a></li>
+					<li class="breadcrumb-item active">Editing Format</li>
+				</ol>
+			</nav>
+		}
+		<h3>Edit Format</h3>
+
+	}
+
+	@if (!String.IsNullOrEmpty(format.CoverImageUrl) && String.IsNullOrEmpty(FileUrl))
+	{
+		<div class="mb-3">
+			<h3>Current Cover Image</h3>
+			<img src="@format.CoverImageUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+		</div>
+	}
+	else if (!String.IsNullOrEmpty(format.CoverImageUrl) && !String.IsNullOrEmpty(FileUrl))
+	{
+		<div class="mb-3">
+			<h3>Current Cover Image</h3>
+			<img src="@format.CoverImageUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+		</div>
+		<div class="mb-3">
+			<h3>New Cover Image</h3>
+			<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+		</div>
+	}
+	else if (String.IsNullOrEmpty(format.CoverImageUrl) && !String.IsNullOrEmpty(FileUrl))
+	{
+		<div class="mb-3">
+			<h3>New Cover Image</h3>
+			<img src="@FileUrl" alt="Format Cover Image" style="max-width: 200px; max-height: 300px;" />
+		</div>
+	}
+	@if (!format.IsLocked)
+	{
+		<EditForm Model="@format">
+			<div class="form-group">
+				<label for="formatCoverURL">Format Cover URL</label>
+				<SfUploader ID="UploadFiles" AutoUpload="true" AllowedExtensions=".jpg,.jpeg,.png,.gif,.svg" EnableHtmlSanitizer="true">
+					<UploaderAsyncSettings SaveUrl="/api/Image/Save" RemoveUrl="/api/Image/DeleteFile"></UploaderAsyncSettings>
+					<UploaderEvents FileSelected="@OnFileSelected" BeforeRemove="@OnBeforeFileRemoved" OnRemove="@OnFileRemove" ValueChange="@OnChange" Success="@OnSuccess"></UploaderEvents>
+				</SfUploader>
+			
+			</div>
+			@if (formatId != null)
+			{
+				<AuthorizeView Roles="Admin, Moderator" Context="authState">
+					<Authorized>
+						<div class="form-group">
+							<label for="formatType">Type</label>
+							<SfDropDownList DataSource="@formatTypes" FilterType="FilterType.Contains" Placeholder="Select from the drop down menu" AllowFiltering="true" @bind-Value="format.FormatTypeId">
+								<DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+							</SfDropDownList>
+						</div>
+						<div class="form-group">
+							<label for="formatEdition">Edition</label>
+							<InputText id="formatEdition" class="form-control" @bind-Value="format.Edition" />
+						</div>
+						<div class="form-group">
+							<label for="formatReleaseDate">Release Date</label>
+							<InputDate id="formatReleaseDate" class="form-control" format="mm/dd/yyyy" @bind-Value="format.ReleaseDate" />
+						</div>
+						<div class="form-group">
+							<label for="formatSlug">Format Slug</label>
+							<InputText id="formatSlug" class="form-control" @bind-Value="format.Slug" />
+						</div>
+					</Authorized>
+				</AuthorizeView>
+			}
+			else
+			{
+				<div class="form-group">
+					<label for="formatType">Type</label>
+					<SfDropDownList DataSource="@formatTypes" FilterType="FilterType.Contains" Placeholder="Select from the drop down menu" AllowFiltering="true" @bind-Value="format.FormatTypeId">
+						<DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+					</SfDropDownList>
+				</div>
+				<div class="form-group">
+					<label for="formatEdition">Edition</label>
+					<InputText id="formatEdition" class="form-control" @bind-Value="format.Edition" />
+				</div>
+				<div class="form-group">
+					<label for="formatReleaseDate">Release Date</label>
+					<InputDate id="formatReleaseDate" class="form-control" format="mm/dd/yyyy" @bind-Value="format.ReleaseDate" />
+				</div>
+			}
+			<div class="form-group">
+				<InputCheckbox id="formatIsInPrint" class="form-check-input" @bind-Value="formatRevision.IsInPrint" />
+				<label class="form-check-label" for="formatIsInPrint">Is it still being produced?</label>
+			</div>
+			<div class="form-group">
+				<InputCheckbox id="formatIsAIAssisted" class="form-check-input" @bind-Value="formatRevision.IsAiAssisted" />
+				<label class="form-check-label" for="formatIsAIAssisted">Is the Format AI Assisted?</label>
+			</div>
+			@if (formatRevision.IsAiAssisted)
+			{
+				<div class="form-group">
+					<label for="formatAIAssistsWith">AI Assists With</label>
+					<InputTextArea id="formatAIAssistsWith" class="form-control" @bind-Value="formatRevision.AIAssistsWith" />
+				</div>
+			}
+			<div class="form-group">
+				<label for="formatOwnership">Ownership Level</label>
+				<InputSelect id="formatOwnership" class="form-select" @bind-Value="formatRevision.OwnershipLevel">
+					@foreach (OwnershipLevel level in Enum.GetValues(typeof(OwnershipLevel)))
+					{
+						<option value="@level">@GetEnumDisplayName(level)</option>
+					}
+				</InputSelect>
+			</div>
+			<div class="form-group">
+				<label for="formatDescription">Description/Review </label>
+				<RichTextEditor @ref="myEditor" Content="@formatRevision.Description" ProductSlug="@productSlug" FormatHash="@formatHash"
+								ContainerName="@containerName" saveDirectory="https://images.gmntgstrg.com/formats/"
+								Placeholder="Please enter in a review of the format here..." />
+			</div>
+		</EditForm>
+	}
+	else
+	{
+		<h3>Format Editing Unavailable</h3>
+		<p class="text-danger mt-4">This format is locked and cannot be edited. Reason: @format.lockedReason</p>
+		<AuthorizeView Roles="Admin, Moderator" Context="authState">
+			<EditForm Model="@format">
+				<div class="form-group">
+					<label for="formatCoverURL">Format Cover URL</label>
+							<SfUploader ID="UploadFiles" AutoUpload="true" AllowedExtensions=".jpg,.jpeg,.png,.svg, .webp" EnableHtmlSanitizer="true">
+						<UploaderAsyncSettings SaveUrl="/api/Image/Save" RemoveUrl="/api/Image/DeleteFile"></UploaderAsyncSettings>
+						<UploaderEvents FileSelected="@OnFileSelected" BeforeRemove="@OnBeforeFileRemoved" OnRemove="@OnFileRemove" ValueChange="@OnChange" Success="@OnSuccess"></UploaderEvents>
+					</SfUploader>
+				</div>
+				<div class="form-group">
+					<label for="formatType">Type</label>
+					<InputText id="formatType" class="form-control" @bind-Value="format.Type" />
+				</div>
+				<div class="form-group">
+					<label for="formatEdition">Edition</label>
+					<InputText id="formatEdition" class="form-control" @bind-Value="format.Edition" />
+				</div>
+				@if (formatId != null)
+				{
+					<div class="form-group">
+						<label for="formatSlug">Format Slug</label>
+						<InputText id="formatSlug" class="form-control" @bind-Value="format.Slug" />
+					</div>
+				}
+				<div class="form-group">
+					<label for="formatReleaseDate">Release Date</label>
+					<InputDate id="formatReleaseDate" class="form-control" format="mm/dd/yyyy" @bind-Value="format.ReleaseDate" />
+				</div>
+				<div class="form-group">
+					<InputCheckbox id="formatIsAIAssisted" class="form-check-input" @bind-Value="formatRevision.IsAiAssisted" />
+					<label class="form-check-label" for="formatIsAIAssisted">Is the Format AI Assisted</label>
+				</div>
+				@if (formatRevision.IsAiAssisted)
+				{
+					<div class="form-group">
+						<label for="formatAIAssistsWith">AI Assists With</label>
+						<InputTextArea id="formatAIAssistsWith" class="form-control" @bind-Value="formatRevision.AIAssistsWith" />
+					</div>
+				}
+				<div class="form-group">
+					<label for="formatOwnership">Ownership Level</label>
+					<InputSelect id="formatOwnership" class="form-select" @bind-Value="formatRevision.OwnershipLevel">
+						@foreach (OwnershipLevel level in Enum.GetValues(typeof(OwnershipLevel)))
+						{
+							<option value="@level">@GetEnumDisplayName(level)</option>
+						}
+					</InputSelect>
+				</div>
+				<div class="form-group">
+					<label for="formatDescription">Description/Review </label>
+					<RichTextEditor ProductSlug="@productSlug" FormatHash="@formatHash" ContainerName="@containerName"
+									@ref="myEditor" Content="@formatRevision.Description" Placeholder="Please enter in a review of the format here..." />
+				</div>
+			</EditForm>
+		</AuthorizeView>
+	}
+	@if (!format.IsLocked)
+	{
+		<AuthorizeView Roles="Admin, Moderator" Context="authState">
+			<Authorized>
+				@if (formatId != null)
+				{
+					<button type="button" class="btn btn-danger mt-4 mx-2"
+							@onclick="DeleteFormat">
+						Delete
+					</button>
+				}
+			</Authorized>
+		</AuthorizeView>
+
+		<button type="submit" class="btn btn-primary mt-4" @onclick="@HandleValidSubmit">Submit</button>
+		<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+	}
+}
+	</div>
+	<div class="right-column"></div>
+</div>
+
+@code {
+	[Parameter]  
+	public int? formatId { get; set; }
+	[Parameter]
+	public int productId { get; set; } = 0;
+	[Parameter]
+	public string? formatHash { get; set; }
+	[Parameter]
+	public string? productSlug { get; set; }
+	[Parameter]
+	public string? containerName { get; set; } = "formats";
+
+	private bool isLoading = true;
+
+	private bool hasRevision = false;
+
+	private RichTextEditor? myEditor;
+	private ProductResponse? product = new();
+	private int CategoryId = 0;
+
+	private List<string> savedFiles = new();
+	private List<string> fileLocations = new();
+	private List<Syncfusion.Blazor.Inputs.FileInfo> uploadedFiles = new();
+
+	private string? saveDirectory { get; set; }
+
+	private List<FormatTypeResponse> formatTypes = new List<FormatTypeResponse>();
+	private FormatTypeResponse? selectedType;
+
+	public string? FileUrl { get; set; }
+
+
+	private FormatRequest format = new();
+
+	private IJSObjectReference? module;
+
+	private HeaderProcessor? _headerProcessor;
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+		if (serverUserRole.Count == 0)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+		if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+	}
+
+	private FormatRevisionRequest formatRevision = new()
+	{
+		OwnershipLevel = OwnershipLevel.Unknown 
+	};
+
+	private FormatRevisionRequest oldFormatRevision = new()
+	{
+		OwnershipLevel = OwnershipLevel.Unknown
+	};
+
+	protected override async Task OnParametersSetAsync()  
+	{
+		
+		if (!String.IsNullOrEmpty(formatHash))
+		{
+			formatId = DecodeHash(formatHash);
+		}
+		if (!string.IsNullOrEmpty(formatHash))  
+		{  
+			var result = await FormatService.GetFormatByID(formatHash);
+			if(result != null && result.Value.Product != null)
+			{
+				product = await ProductService.GetProductById(result.Value.Product.Id);
+				format = new FormatRequest
+				{
+					FormatTypeId = result.Value.FormatTypeId,
+					Type = result.Value.Type,
+					Edition = result.Value.Edition,
+					IsLocked = result.Value.IsLocked,
+					lockedReason = result.Value.lockedReason,
+					CoverImageUrl = result.Value.CoverImageUrl,
+					Slug = result.Value.Slug,
+					ReleaseDate = result.Value.ReleaseDate,
+					EditRequested = result.Value.EditRequested,
+					InformationRequested = result.Value.InformationRequested,
+					ProductId = product!.Value.Id
+				};
+			}
+			else
+			{
+				Console.WriteLine("Full Product Not found");
+				NavigationManager.NavigateTo("notfound");
+			}
+
+			var revisionResult = await FormatRevisionService.GetRecentRevisionForEditing((int)formatId!);
+			if (revisionResult == null)
+			{
+				Console.WriteLine("No revision found");
+				NavigationManager.NavigateTo("notfound");
+			}
+			else
+			{
+				formatRevision = new FormatRevisionRequest
+				{
+					Description = revisionResult.Value.Description,
+					OwnershipLevel = revisionResult.Value.OwnershipLevel, // Ensure OwnershipLevel is set from the result
+					IsInPrint = revisionResult.Value.IsInPrint,
+					IsAiAssisted = revisionResult.Value.IsAiAssisted,
+					AIAssistsWith = revisionResult.Value.AIAssistsWith,
+					RevisionNumber = revisionResult.Value.RevisionNumber
+				};
+				oldFormatRevision = new FormatRevisionRequest
+				{
+					Id = revisionResult.Value.Id,
+					Description = formatRevision.Description,
+					OwnershipLevel = formatRevision.OwnershipLevel, // Ensure OwnershipLevel is set from the result
+					IsInPrint = formatRevision.IsInPrint,
+					IsAiAssisted = formatRevision.IsAiAssisted,
+					AIAssistsWith = formatRevision.AIAssistsWith,
+					RevisionNumber = formatRevision.RevisionNumber
+				};
+
+			}
+			productId = product!.Value.Id;
+			CategoryId = product.Value.Category.Id;
+			await SetPageTitle($"Editing {format.Type} - {format.Edition} for {product.Value.Name} - GoMontag");
+		}
+		else
+		{
+			if (!String.IsNullOrEmpty(productSlug))
+			{
+				var productResult = await ProductService.GetProductBySlug(productSlug);
+				if (productResult == null)
+				{
+					Console.WriteLine("Slug Not Found");
+					NavigationManager.NavigateTo("notfound");
+					return;					
+				}
+
+				product = productResult;
+				productId = product.Value.Id;
+				CategoryId = productResult.Value.Category.Id;
+				await SetPageTitle($"Create a New Format for {product.Value.Name} - GoMontag");
+			}
+			else
+			{
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+
+		}
+		if(CategoryId != 0)
+		{
+			var formatTypeResults = await FormatTypeService.GetFormatTypesByCategoryId(CategoryId);
+			if (formatTypeResults == null)
+			{
+				NavigationManager.NavigateTo("notfound");
+				return;
+			}
+			else
+			{
+				formatTypes = formatTypeResults;
+			}
+		}
+		else
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+
+		if(!string.IsNullOrWhiteSpace(containerName) && !string.IsNullOrWhiteSpace(productSlug) && !string.IsNullOrWhiteSpace(formatHash))
+		{
+			saveDirectory = "https://images.gmntgstrg.com/" + containerName + "/" + productSlug + "/" + formatHash;
+		}
+		containerName = "formats";
+		isLoading = false;
+	}
+
+	private async Task OnFileSelected(SelectedEventArgs args)
+	{
+		if (string.IsNullOrEmpty(formatHash))
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+		new { blobDirectory = productSlug + "/" + "newly-created" + "/cover-image"} };
+		}
+		else
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+			new { blobDirectory = productSlug + "/" + formatHash + "/cover-image"} };
+		}
+
+	}
+
+	private async Task OnBeforeFileRemoved(BeforeRemoveEventArgs args)
+	{
+		if (string.IsNullOrEmpty(formatHash))
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+		new { blobDirectory = productSlug + "/" + "newly-created" + "/cover-image"} };
+		}
+		else
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+			new { blobDirectory = productSlug + "/" + formatHash + "/cover-image"} };
+		}
+	}
+
+	private async Task OnFileRemove(RemovingEventArgs args)
+	{
+		if (string.IsNullOrEmpty(formatHash))
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+		new { blobDirectory = productSlug + "/" + "newly-created" + "/cover-image"} };
+		}
+		else
+		{
+			args.CurrentRequest = new List<object> { new { Authorization = "" }, new { containerName = containerName },
+			new { blobDirectory = productSlug + "/" + formatHash + "/cover-image"} };
+		}
+	}
+
+	private async Task OnChange(Syncfusion.Blazor.Inputs.UploadChangeEventArgs args)
+	{
+		uploadedFiles.Clear();
+		if (args?.Files != null)
+		{
+			foreach (var f in args.Files)
+			{
+				uploadedFiles.Add(f.FileInfo);
+			}
+		}
+	}
+
+	private void OnFailure(FailureEventArgs args)
+	{
+		Console.WriteLine($"Upload failed: {args?.Response.ResponseText}");
+	}
+
+	private void ParseResponseString(string json)
+	{
+		using var doc = System.Text.Json.JsonDocument.Parse(json);
+		ParseResponseJsonElement(doc.RootElement);
+	}
+
+	private void ParseResponseJsonElement(JsonElement root)
+	{
+		if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+		{
+			if (root.TryGetProperty("files", out var files) && files.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var f in files.EnumerateArray())
+				{
+					var name = f.GetString();
+					if (!string.IsNullOrEmpty(name) && !savedFiles.Contains(name))
+						savedFiles.Add(name);
+				}
+			}
+
+			if (root.TryGetProperty("fileLocations", out var locs) && locs.ValueKind == JsonValueKind.Array)
+			{
+				foreach (var l in locs.EnumerateArray())
+				{
+					var loc = l.GetString();
+					if (!string.IsNullOrEmpty(loc) && !fileLocations.Contains(loc))
+						fileLocations.Add(loc);
+				}
+			}
+		}
+	}
+
+	private void OnSuccess(SuccessEventArgs args)
+	{
+		try
+		{
+			if (args == null) return;
+
+			// The server returns JSON like: { files: [...], fileLocations: [...] }
+			var response = args.Response.ResponseText;
+			if (response == null)
+				return;
+			ParseResponseString(response);
+
+			FileUrl = fileLocations[0];
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($" Parse error: {ex.Message}");
+			FileUrl = null;
+		}
+	}
+
+	async Task HandleValidSubmit()  
+	{
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+		if (serverUserRole == null || serverUserRole.Count == 0)
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+		if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+		{
+			NavigationManager.NavigateTo("notfound");
+			return;
+		}
+		if(!string.IsNullOrEmpty(FileUrl))
+			format.CoverImageUrl = FileUrl;
+
+		selectedType = await FormatTypeService.GetFormatTypeByID(format.FormatTypeId);
+		if (selectedType == null)
+		{
+			format.Type = "";
+		}
+		else
+		{
+			format.Type = selectedType.Value.Name;
+		}
+
+		if (formatId == null)  
+		{
+			_headerProcessor = new HeaderProcessor($"{format.Type}_{format.Edition}");
+			format.InformationRequested = "";
+			formatRevision.Description = myEditor?.Content ?? string.Empty;
+			formatRevision.Description = _headerProcessor.ProcessHtml(formatRevision.Description);
+			formatRevision.Description = _linkProcessor.ProcessHtml(formatRevision.Description);
+			formatRevision.RevisionNumber = 1;
+			format.ProductId = (int)productId!;
+			var formatResponse = await FormatService.CreateFormat(format);
+			formatRevision.FormatId = formatResponse.Id;
+			var revisionResponse = await FormatRevisionService.CreateRevision(formatRevision);
+			format.formatrevisionid = revisionResponse.Id;
+			var formatResponseHashId = CreateIDHash(formatResponse.Id);
+			await FormatService.UpdateFormat(formatResponseHashId, format);
+			NavigationManager.NavigateTo($"/products/view/{productSlug}");  
+		}  
+		else  
+		{
+			_headerProcessor = new HeaderProcessor($"{format.Type}_{format.Edition}");
+			formatRevision.Description = myEditor?.Content ?? string.Empty;
+			formatRevision.Description = _headerProcessor.ProcessHtml(formatRevision.Description);
+			formatRevision.Description = _linkProcessor.ProcessHtml(formatRevision.Description);
+			if (!HasChanges())
+			{
+				Console.WriteLine("No Changes Found.");
+				format.formatrevisionid = oldFormatRevision.Id;
+				var formatResponse = await FormatService.UpdateFormat(formatHash!, format);
+				NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+			}
+			else
+			{
+				var formatResponse = await FormatService.UpdateFormat(formatHash!, format);
+				formatRevision.FormatId = formatResponse.Id;
+				formatRevision.PreviousRevisionId = oldFormatRevision.Id;
+				formatRevision.RevisionNumber = oldFormatRevision.RevisionNumber + 1;
+				var revisionResponse = await FormatRevisionService.CreateRevision(formatRevision);
+				format.formatrevisionid = revisionResponse.Id;
+				await FormatService.UpdateFormat(formatHash!, format);
+				NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+			}
+		}  
+	}
+	private bool HasChanges()
+	{
+		return !string.Equals(oldFormatRevision.Description?.Trim(), formatRevision.Description?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+		!string.Equals(oldFormatRevision.AIAssistsWith?.Trim(), formatRevision.AIAssistsWith?.Trim(), StringComparison.OrdinalIgnoreCase) ||
+		oldFormatRevision.IsAiAssisted != formatRevision.IsAiAssisted || oldFormatRevision.IsInPrint != formatRevision.IsInPrint ||
+		oldFormatRevision.OwnershipLevel != formatRevision.OwnershipLevel;
+	}
+
+	private string GetEnumDisplayName(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Name ?? value.ToString();
+	}
+
+	private async Task DeleteFormat()
+	{
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this format?");
+		if (!string.IsNullOrEmpty(formatHash) && confirmed)
+		{
+			await FormatService.DeleteFormat(formatHash);
+			NavigationManager.NavigateTo($"/products/view/{productSlug}");
+		}
+	}
+
+	private string CreateIDHash(int Id)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 0,
+			Alphabet = "",
+		});
+		var hash = sqids.Encode(Id);
+		return hash;
+	}
+
+	private int DecodeHash(string hash)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 0,
+			Alphabet = "",
+		});
+		var realId = sqids.Decode(hash).Single();
+		return realId;
+	}
+
+	async Task CancelEdit()
+	{
+		if (formatId == null)
+		{
+			NavigationManager.NavigateTo($"/products/view/{productSlug}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{formatHash}");
+		}
+	}
+}
+

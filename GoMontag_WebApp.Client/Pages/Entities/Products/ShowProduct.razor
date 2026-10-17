@@ -1,0 +1,304 @@
+﻿@page "/products/view/{Slug}"
+@using GoMontag_WebApp.Client.Pages.Entities.Accounts.Users
+@using GoMontag_WebApp.Client.Pages.Entities.Formats
+@using GoMontag_WebApp.Client.Shared.Buttons.Products
+@* @using GoMontag_WebApp.Components.Pages.Entities.Formats *@
+@inject HttpClient _http
+@inject IProductClientToServerComponentService ProductService
+@inject IUserTimeZoneClientService TimeZoneService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+@* @rendermode InteractiveServer *@
+
+
+<div class="product-page-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+@if(isLoading)
+{
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/products/">Products</a></li>
+			<li class="breadcrumb-item active">Unknown</li>
+		</ol>
+	</nav>
+			<p><strong>Loading In Product Information Please Wait...</strong></p>
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+}
+else if (isLoading == false && product != null)
+{
+	<PageTitle>@product!.Value.Name - GoMontag</PageTitle>
+	<HeadContent>
+				<meta name="og:title" content="@product!.Value.Name - GoMontag" />
+				<link rel="canonical" href="https://www.gomontag.com/products/view/@Slug" />
+				<meta name="description" content="@product!.Value.Name in @product.Value.CategoryName" />
+				<meta property="og:url" content="https://www.gomontag.com/products/view/@Slug" />
+				<meta property="og:description" content="@product!.Value.Name in @product.Value.CategoryName" />
+				<meta name="keywords" content="@product.Value.CategoryName, @product.Value.Name, Ownership, GoMontag,  " />
+				@if (string.IsNullOrEmpty(product.Value.CoverImageURL))
+				{
+					<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+				}
+				else
+				{
+					<meta name="image" content="@product.Value.CoverImageURL" />
+					<meta property="og:image" content="@product.Value.CoverImageURL" />
+				}
+				@* Twitter Meta Tags *@
+				<meta name="twitter:card" content="summary">
+				<meta name="twitter:image" content="@product!.Value.CoverImageURL" />
+				<meta name="twitter:site" content="https://www.gomontag.com/products/view/@Slug" />
+				<meta name="twitter:title" content="@product!.Value.Name - GoMontag" />
+				<meta name="twitter:description" content="@product!.Value.Name in @product.Value.CategoryName" />
+				@if (string.IsNullOrEmpty(product.Value.CoverImageURL))
+				{
+					<meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+				}
+				else
+				{
+					<meta name="twitter:image" content="@product.Value.CoverImageURL" />
+				}
+
+	</HeadContent>
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/products/@product!.Value.Category.Slug/?title=@product.Value.Name&page=1">Products</a></li>
+			<li class="breadcrumb-item active">@product!.Value.Name</li>
+		</ol>
+	</nav>
+	<hr />
+	<div class="product-container-grid">
+	<div class="product-display-container">
+		@if (string.IsNullOrEmpty(product.Value.CoverImageURL))
+		{
+			
+			<div class="product-image-column">
+				<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+					 style="max-width: min(200px, 100%); max-height: 300px;"
+					 alt="Missing Image Picture Created By: Khanh Nguyen" />
+			</div>
+		}
+		else
+		{
+			<meta property="og:image" content="@product.Value.CoverImageURL" />
+			<div class="product-image-column">
+				<img src="@product.Value.CoverImageURL" style="max-width: min(200px, 100%); height: auto;" />
+			</div>
+		}
+		<div class="product-details-column">
+			<h2>@product.Value.Name</h2>
+			<h4>@product.Value.Category?.Name</h4>
+			@if (!string.IsNullOrEmpty(UserName))
+			{
+				<RecommendProductButton productSlug="@product.Value.Slug" ButtonText="Recommend Item" />
+			}
+			@if (string.IsNullOrEmpty(product.Value.Category?.CreatorsTitle))
+			{
+				<p><strong>Creators:</strong> @product.Value.Creators</p>
+			}
+			else
+			{
+				<p><strong>@product.Value.Category?.CreatorsTitle:</strong> @product.Value.Creators</p>
+			}
+				<p><strong>For Ages:</strong> @product.Value.ContentRating+ </p>
+			@if (product.Value.IsAIAssisted)
+			{
+				<p><i class="bi bi-robot"></i>Used AI with the creation of the product</p>
+				<p>@product.Value.AIAssistsWith</p>
+				@if (!string.IsNullOrEmpty(product.Value.AIAssistsSource))
+				{
+					<p>Source: <a href="@product.Value.AIAssistsSource">@product.Value.AIAssistsSource</a></p>
+				}		
+			}
+			@if (product.Value.ForMatureAudiences)
+			{
+				<h4><i class="bi bi-exclamation-diamond-fill"></i>For Mature Audiences Only</h4>
+						<p><strong>Reason:</strong></p>
+				<p>@product.Value.MatureAudienceReason</p>
+			}
+					<p><strong>Release Date:</strong> @product.Value.ProductLaunchDate</p>
+			@if (product.Value.CreatorId != null)
+			{
+				<p><small><strong>Added In By:</strong></small></p>
+				<DisplayUserInfo UserId="@product.Value.CreatorId" />
+			}
+				<p><small><strong>Last Modified:</strong> @userEditedTime.ToString("f") UTC</small></p>
+			@if (product.Value.ModifierId != null)
+			{
+				<p><small><strong>Last Edited By:</strong></small></p>
+				<DisplayUserInfo UserId="@product.Value.ModifierId" OnlyShowName="true" />
+			}
+			
+			<AuthorizeView Roles="Admin, Moderator">
+				<Authorized>
+					<div class="product-lock-button">
+						<br />
+						@if (!product.Value.IsLocked)
+						{
+							<LockProductButton UrlString="@product.Value.Slug" ButtonText="Lock" />
+							<br />
+						}
+						else
+						{
+							<LockProductButton UrlString="@product.Value.Slug" ButtonText="Unlock" />
+							<br />
+						}
+					</div>
+				</Authorized>
+			</AuthorizeView>
+			@if (!product.Value.IsLocked)
+			{
+				<AuthorizeView Roles="Admin, Moderator, AlphaTester, User">
+					<Authorized>
+						<EditProductButton productSlug="@product.Value.Slug" ButtonText="Edit Product" />
+					</Authorized>
+				</AuthorizeView>
+			}
+			else
+			{
+				
+				<div class="format-locked">
+					@if (product.Value.ModifierId != null)
+					{
+						<h4>Locked By:</h4>
+						<DisplayUserInfo UserId="@product.Value.LockedByUser" />
+					}
+					<p><strong>Locked: </strong>@product.Value.lockedReason</p>
+				</div>
+				<AuthorizeView Roles="Admin, Moderator">
+					<Authorized>
+						<EditProductButton productSlug="@product.Value.Slug" ButtonText="Edit Product" />
+					</Authorized>
+					<NotAuthorized>
+						<div class="format-edit-button">
+							<button class="btn btn-primary" disabled>
+								Edit Product
+							</button>
+						</div>
+					</NotAuthorized>
+				</AuthorizeView>
+			}
+		</div>
+		</div>
+		<hr />
+		<div class="product-description">
+			@if (product.Value.HasIssue && !String.IsNullOrEmpty(product.Value.IssueURL) )
+			{
+				<div class="product-warning">
+					<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+					<a target="_blank" rel="noopener noreferrer" href="@product.Value.IssueURL"><strong>@product.Value.Issue</strong></a>
+				</div>
+				<br />
+			}
+			else if (product.Value.HasIssue && String.IsNullOrEmpty(product.Value.IssueURL))
+			{
+				<div class="product-warning">
+					<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+					<p><strong>@product.Value.Issue</strong></p>
+				</div>
+				<br />
+			}
+			<h3>Description:</h3>
+			<p>@product.Value.Description</p>
+			<br />
+			<p><strong>Source: </strong> <a target="_blank" rel="noopener noreferrer" href="@product.Value.DescriptionSource">@product.Value.DescriptionSource</a></p>
+		</div>
+	</div>
+			<h3 id="available">Formats Available</h3>
+			<div class="formatsperproduct">
+				<FormatsPerProduct ProductSlug="@product!.Value.Slug" ProductId="product!.Value.Id" TypeTitle="@TypeTitle" EditionTitle="@EditionTitle" />
+			</div>
+			<div class="formatsperprod-smaller">
+				<FormatsPerProductSmaller ProductSlug="@product!.Value.Slug" ProductId="product!.Value.Id" TypeTitle="@TypeTitle" EditionTitle="@EditionTitle" />
+			</div>
+			
+}
+else if(product == null && isLoading == false)
+	{
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item"><a href="/">Home</a></li>
+					<li class="breadcrumb-item active">Product Not Found</li>
+				</ol>
+			</nav>
+		<h2>404 Product Not Found</h2>
+	}
+
+    </div>
+	<div class="right-column"></div>
+</div>
+
+@code {
+	[Parameter]
+	public string? Slug { get; set; }
+
+	private bool isLoading = true;
+
+	private string? UserName { get; set; } = string.Empty;
+
+	private ProductResponse? product = new ProductResponse();
+	private ProductRequest productEdit = new ProductRequest();
+
+	private DateTimeOffset userEditedTime;
+
+	private string TypeTitle { get; set; } = "Type";
+	private string EditionTitle { get; set; } = "Edition";
+
+	protected override async Task OnParametersSetAsync()
+	{
+
+		if (string.IsNullOrEmpty(Slug))
+		{
+			NavigationManager.NavigateTo("notfound");
+		}
+		else if (!string.IsNullOrEmpty(Slug))
+		{
+			var prodResponse = await ProductService.GetProductBySlug(Slug);
+			if (prodResponse == null)
+			{
+				product = null;
+			}
+			else
+			{
+				product = prodResponse;
+				if (!string.IsNullOrWhiteSpace(product!.Value.Category.TypeTitle))
+				{
+					TypeTitle = product!.Value.Category.TypeTitle;
+				}
+				if (!string.IsNullOrWhiteSpace(product!.Value.Category.EditionTitle))
+				{
+					EditionTitle = product!.Value.Category.EditionTitle;
+				}
+				var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+
+				if (user.Identity?.IsAuthenticated ?? true)
+				{
+					UserName = user.Identity!.Name;
+				}
+				userEditedTime = TimeZoneService.ConvertToUserTime(product.Value.ModifiedDate);
+			}
+			
+		}
+		
+		isLoading = false;
+	}
+
+	private void RecommendProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/recommend");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+
+	private async Task LockProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/lock");
+	}
+}

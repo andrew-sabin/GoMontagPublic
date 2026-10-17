@@ -1,0 +1,57 @@
+﻿.product-and-format-counter{
+    display: grid;
+    grid-template-areas: "message message"
+        "product format" 
+        "requests requests";
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+    margin: 5px;
+}
+
+.total-products, .total-formats, .total-requested-formats, .message {
+    border: 3px solid grey;
+    text-align: center;
+    color: #011F5F;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+}
+
+.message{
+    grid-area: message;
+    margin: 10px;
+    padding: 20px;
+}
+
+.total-products{
+    grid-area: product;
+}
+
+.total-formats{
+    grid-area: format;
+}
+
+.total-requested-formats{
+    grid-area: requests;
+}
+
+a {
+    text-decoration: none;
+}
+
+    a:hover {
+        text-decoration:underline;
+    }
+
+h4.total-formats, .total-products {
+    
+}
+
+@media(max-width:339px){
+    h4 {
+        font-size: 12px;
+    }
+    p {
+        font-size: 10px;
+    }
+}

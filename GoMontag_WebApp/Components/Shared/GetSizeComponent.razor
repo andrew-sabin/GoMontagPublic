@@ -1,0 +1,53 @@
+﻿@inject IJSRuntime JS
+@implements IDisposable
+
+<div>Width: @width, Height: @height</div>
+
+@code {
+    private int width;
+    private int height;
+    private DotNetObjectReference<ResizeHandler>? dotNetRef;
+
+    private IJSObjectReference? _jsModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/windowHelper.js");
+            var initial = await _jsModule.InvokeAsync<Dimensions>("getWindowDimensions");
+            width = initial.Width;
+            height = initial.Height;
+            StateHasChanged();
+
+            dotNetRef = DotNetObjectReference.Create(new ResizeHandler(this));
+            await _jsModule.InvokeVoidAsync("startResizeListener", dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnResize(int newWidth, int newHeight)
+    {
+        width = newWidth;
+        height = newHeight;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (dotNetRef != null)
+        {
+            JS.InvokeVoidAsync("stopResizeListener");
+            dotNetRef.Dispose();
+        }
+    }
+
+    public class ResizeHandler
+    {
+        private readonly GetSizeComponent component;
+        public ResizeHandler(GetSizeComponent comp) => component = comp;
+        [JSInvokable] public void OnResize(int w, int h) => component.OnResize(w, h);
+    }
+
+    public class Dimensions { public int Width { get; set; } public int Height { get; set; } }
+}

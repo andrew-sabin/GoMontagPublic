@@ -1,0 +1,45 @@
+﻿@page "/"
+@using GoMontag_WebApp.Components.Shared
+@using GoMontag_WebApp.Client.Shared
+
+<PageTitle>GoMontag - Home</PageTitle>
+<HeadContent>
+	<link rel="canonical" href="https://www.gomontag.com/" />
+	<meta name="image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02.png" />
+	<meta name="description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+	<meta name="og:title" content="GoMontag - Home" />
+	<meta property="og:url" content="https://www.gomontag.com/" />
+	<meta property="og:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+	<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02.png" />
+	<meta name="keywords" content="Video Games, Software, Tools, Appliances, Ownership, GoMontag" />
+	@* Twitter Meta Tags *@
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:site" content="https://www.gomontag.com/" />
+	<meta name="twitter:title" content="GoMontag - Home" />
+	<meta name="twitter:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+	<meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02.png" />
+</HeadContent>
+
+<div class="homepage-grid">
+	<div class="left-column">
+		<FormatHomePageCards />
+	</div>
+	<div class="main-content-column">
+		<div class="site-title">
+			<img src="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" alt="GoMontag Logo Saying Know What You Own Always">
+		</div>
+		
+		<div class="search-bar">
+			<Search />
+		</div>
+		<div class="site-pagecount">
+			<PageCounter />
+		</div>
+		<div class="update-cards">
+			<HomePageCards/>
+		</div>
+	</div>
+	<div class="right-column"></div>
+</div>
+<br />
+

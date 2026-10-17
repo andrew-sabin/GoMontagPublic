@@ -1,0 +1,202 @@
+﻿.lightbox-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+    .lightbox-container.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+.lightbox-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.lightbox-image {
+    max-width: 100%;
+    max-height: 80vh;
+    display: block;
+    margin: 0 auto;
+}
+
+.lightbox-caption {
+    color: white;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 1.25rem;
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 100px;
+    right: 225px;
+    background: none;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease, background 0.3s ease;
+}
+    .lightbox-close:hover {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+.lightbox-navigation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none; /* Prevents clicks from passing through */
+}
+
+.lightbox-nav {
+    pointer-events: auto; /* Allows clicks on navigation buttons */
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    font-size: 2.5rem;
+    width: 8%;
+    height: 100%;
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    opacity: 0.5;
+    border-radius: 4px;
+    margin: 0;
+    transition: opacity 0.3s ease;
+    position:absolute;
+    top: 0;
+}
+
+    .lightbox-nav:hover {
+        opacity: 1;
+        background: rgba(0,0,0,0.2);
+    }
+
+    .lightbox-nav.prev {
+        justify-content: flex-start;
+        padding-left: 20px;
+        left: 0;
+    }
+
+    .lightbox-nav.next {
+        justify-content: flex-end;
+        padding-right: 20px;
+        right: 0;
+    }
+
+.lightbox-counter {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    color: white;
+    font-size: 1.2rem;
+}
+
+/* Gallery styles */
+.display-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 5px; /* This creates equal spacing between items */
+    padding: 20px;
+}
+
+    .display-gallery img {
+        width: auto;
+        height: auto;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+        .display-gallery img:hover {
+            transform: scale(1.05);
+        }
+
+        .display-gallery img:active {
+            transform: scale(0.95);
+        }
+
+        .display-gallery img:focus {
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+        }
+
+@media (max-width: 1024px) {
+    .display-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}
+
+@media (max-width: 940px) {
+    .lightbox-close {
+        top: 100px;
+        right: 100px;
+    }
+}
+
+@media (max-width: 940px) {
+    .lightbox-close {
+        top: 100px;
+        right: 50px;
+    }
+}
+
+@media (max-width: 550px){
+    .display-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    }
+}
+
+@media (max-width: 500px) {
+    .lightbox-close {
+        top: 125px;
+        right: 50px;
+    }
+}
+
+@media (max-width: 500px) {
+    .lightbox-close {
+        top: 175px;
+        right: 50px;
+    }
+}
+
+@media (max-width: 400px){
+    .display-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    }
+}
+
+@media (max-width: 375px) {
+    .lightbox-close {
+        top: 75px;
+        right: 50px;
+    }
+}

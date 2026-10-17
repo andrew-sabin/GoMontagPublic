@@ -1,0 +1,145 @@
+﻿@using Blazorise
+@using GoMontag_Shared.Models.NewsUpdate
+@using GoMontag_Shared.Models.RecommendationList
+
+@inject INewsBlogComponentService NewsBlogService
+@inject IRecommendationListComponentService recommendationListService
+
+
+@* @if (!isLoading_List && hasList)
+{
+    <RecommendationCarosel isFrontPage="false" listId="stickyList.Id" />
+}
+else if(!isLoading_List && !hasList)
+{
+    <p><strong>No Recommendation List Found</strong></p>
+}
+else
+{
+    <p><strong>Loading In Recent News...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+} *@
+<br /> 
+@if (!isLoading_News)
+{
+    <div class="home-cards-container">
+        <div class="row g-3">
+            <div class="card my-5">
+                <div class="card-header">
+                    <h5 class="card-title">Latest Updates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="sticky-blog">
+                        @if (StickyBlog != null)
+                        {
+                            <h3 class=""><i class="bi bi-pin-fill"></i> Pinned Blog Post</h3>
+                            <a href="/site-news/article/@StickyBlog.Value.slug"><h4>@StickyBlog!.Value.Title</h4></a>
+                            @if (StickyBlog.Value.CoverImageUrl != null)
+                            {
+                                <img src="@StickyBlog.Value.CoverImageUrl" style="min-width:100px; max-width: 50%; max-height: 400px;" />
+                            }
+                            <p class="my-3"><a href="/site-news/article/@StickyBlog.Value.slug">Read More...</a></p>
+                            <hr />
+                            <h3> Latest Updates</h3>
+                        }
+                    </div>
+                    
+                    
+                    @if (UpdateBlogs != null)
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Blog Title</th>
+                                    <th>Created Date</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach(var update in UpdateBlogs)
+                                {
+                                    <tr>
+                                        <td><a href="/site-news/article/@update.slug">@update.Title</a></td>
+                                        <td><a href="/site-news/article/@update.slug">@update.CreatedDate.ToString("MM/dd/yyyy")</a></td>
+                                        <td><a href="/site-news/article/@update.slug">@update.ModifiedDate.ToString("MM/dd/yyyy")</a></td>
+                                    </tr>    
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+       
+        </div>
+    </div>
+}
+else
+{
+    <p><strong>Loading In Recent News...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+
+}
+<br />
+
+
+@code{
+    public List<NewsBlogResponse>? UpdateBlogs { get; set; }
+    public NewsBlogResponse? StickyBlog { get; set; }
+
+    public List<FormatResponse>? recentFormats { get; set; }
+    public List<FormatResponse>? updatedFormats { get; set; }
+
+    public ListResponse stickyList { get; set; }
+
+    private bool isLoading_News = true;
+    private bool isLoading_List = true;
+    private bool hasList = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var getUpdateBlogs = await NewsBlogService.GetLatestUpdates("Update", 4, false);
+        if (getUpdateBlogs != null)
+        {
+            UpdateBlogs = getUpdateBlogs;
+        }
+
+        var getLatestSticky = await NewsBlogService.GetLatestStickies(1, true);
+        if(getLatestSticky == null || getLatestSticky.Count <= 0)
+        {
+            StickyBlog = null;
+        }
+        else
+        {
+            StickyBlog = getLatestSticky[0];
+        }
+
+        isLoading_News = false;
+
+        // var getRecommendationList = await recommendationListService.GetFrontPagesRecommendLists(1);
+        // if (getRecommendationList.Count() > 0)
+        // {
+        //     stickyList = getRecommendationList[0];
+        //     hasList = true;
+        // }
+        // else
+        // {
+        //     hasList = false;
+        // }
+        // isLoading_List = false;
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+}

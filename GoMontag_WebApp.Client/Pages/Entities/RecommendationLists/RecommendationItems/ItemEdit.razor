@@ -1,0 +1,320 @@
+﻿@page "/recommend/{recommendListHash}/item/{recommendationHash}"
+@inject IProductClientToServerComponentService productService
+@inject IRecommendationListClientToServerComponentService recommendationListService
+@inject IRecommendationItemClientToServerComponentService recommendationItemService
+@inject IUserClientToServerComponentService UserComponentService
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject NavigationManager navigationManager
+@inject IJSRuntime JSRuntime
+
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<div class="products-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+@if(product != null && recommendationHash != null && isLoading == false)
+{
+			<h3>From List: <a href="/recommend/@recommendListHash">@recommendList!.Value.Name</a></h3>
+    <div class="card my-4">
+						<div class="card-header">
+							<a href="products/view/@product.Value.Slug">
+								<h5>@product.Value.Name</h5>
+							</a>
+						</div> 
+						@* card header end *@
+						<div class="card-body">
+							<div class="product-container">
+								<div class="product-image-column">
+									@if (string.IsNullOrEmpty(product.Value.CoverImageURL))
+									{
+										<p>
+											<a href="/products/view/@product.Value.Slug">
+												<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+													 class="img-thumbnail"
+													 style="max-width: min(200px, 100%); max-height: 300px;"
+													 alt="Missing Image Picture Created By: Khanh Nguyen" />
+											</a>
+										</p>
+
+									}
+									else
+									{
+										<p>
+											<a href="/products/view/@product.Value.Slug">
+												<img src="@product.Value.CoverImageURL"
+													 style="max-width: min(200px, 100%); max-height: 200px;"
+													 class="img-thumbnail" />
+											</a>
+										</p>
+									}
+								</div>
+								@* end of product image column *@
+								<div class="product-details-column">
+									<p><strong>@product.Value.Category.Name</strong></p>
+									@if (string.IsNullOrEmpty(product.Value.Category.CreatorsTitle))
+									{
+										<p><strong>Created By:</strong> @product.Value.Creators</p>
+									}
+									else
+									{
+										<p><strong>@product.Value.Category.CreatorsTitle:</strong> @product.Value.Creators</p>
+									}
+									<p><strong>For Ages:</strong> @product.Value.ContentRating+</p>
+									<p><strong>First Released:</strong> @product.Value.ProductLaunchDate</p>
+
+									@if (product.Value.IsAIAssisted)
+									{
+										<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+									}
+									@if (product.Value.ForMatureAudiences)
+									{
+										<p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+									}
+								</div>
+								@* end of product details column*@
+								<div class="product-description-row">
+									<p><strong>Comments: </strong></p>
+									<p>@recommendItem!.Notes</p>
+								</div>
+								@* end of product description row *@
+							</div>
+							@* end of product container *@
+						</div>
+						@* end of card body *@
+					</div>
+}
+else if (product != null && recommendationId == null && isLoading == false)
+{
+	<h3>From List: @recommendList!.Value.Name</h3>
+	<div class="card my-4">
+		<div class="card-header">
+			<a href="products/view/@product.Value.Slug">
+				<h5>@product.Value.Name</h5>
+			</a>
+		</div>
+		@* card header end *@
+		<div class="card-body">
+			<div class="product-container">
+				<div class="product-image-column">
+					@if (string.IsNullOrEmpty(@product.Value.CoverImageURL))
+					{
+						<p>
+							<a href="/products/view/@product.Value.Slug">
+								<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+									 class="img-thumbnail"
+									 style="max-width: min(200px, 100%); max-height: 300px;"
+									 alt="Missing Image Picture Created By: Khanh Nguyen" />
+							</a>
+						</p>
+
+					}
+					else
+					{
+						<p>
+							<a href="/products/view/@product.Value.Slug">
+								<img src="@product.Value.CoverImageURL"
+									 style="max-width: min(200px, 100%); max-height: 200px;"
+									 class="img-thumbnail" />
+							</a>
+						</p>
+					}
+				</div>
+				@* end of product image column *@
+				<div class="product-details-column">
+					<p><strong>@product.Value.Category.Name</strong></p>
+					@if (string.IsNullOrEmpty(product.Value.Category.CreatorsTitle))
+					{
+						<p><strong>Created By:</strong> @product.Value.Creators</p>
+					}
+					else
+					{
+						<p><strong>@product.Value.Category.CreatorsTitle:</strong> @product.Value.Creators</p>
+					}
+					<p><strong>For Ages:</strong> @product.Value.ContentRating+</p>
+					<p><strong>First Released:</strong> @product.Value.ProductLaunchDate</p>
+
+					@if (product.Value.IsAIAssisted)
+					{
+						<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+					}
+					@if (product.Value.ForMatureAudiences)
+					{
+						<p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+					}
+				</div>
+				@* end of product details column*@
+				<div class="product-description-row">
+					<p><strong>Product Description:</strong></p>
+					<p>@product.Value.Description</p>
+				</div>
+				@* end of product description row *@
+			</div>
+			@* end of product container *@
+		</div>
+		@* end of card body *@
+	</div>
+}
+else if (product == null && recommendationId != null && isLoading == false)
+{
+	<h3>From List: @recommendList!.Value.Name</h3>
+	<h3>Product Not Found</h3>
+}
+
+@if (product == null && recommendationId == null && isLoading == false)
+{
+	<h1>Cannot Make a Recommendation Without a Product</h1>
+}
+else if (product != null && isLoading == false)
+{
+	<EditForm Model="recommendItem" OnValidSubmit="OnHandleSubmit">
+		<DataAnnotationsValidator />
+		<div>
+			<label for="recItemNotes">Your Comments</label>
+			<InputTextArea id="recItemNotes" class="form-control" @bind-Value="recommendItem.Notes" />
+		</div>
+		<button type="submit" class="btn btn-primary mt-4" @onclick="OnHandleSubmit">Submit</button>
+	</EditForm>
+	
+}
+	</div>
+</div>
+
+
+@code {
+	[Parameter]
+	public int? recommendationId { get; set; }
+	[Parameter]
+	public string? recommendationHash { get; set; }
+	[Parameter]
+	public int recommendListId { get; set; }
+	[Parameter]
+	public string? recommendListHash { get; set; }
+	[Parameter]
+	public int productId { get; set; }
+
+
+	private ListResponse? recommendList = new();
+	private RecommendedItemRequest recommendItem = new();
+	private ProductResponse? product = new();
+
+	private bool isLoading = true;
+
+	private IJSObjectReference? module;
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+		if (serverUserRole.Count == 0)
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+		if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+		if(recommendationId <= 0 || string.IsNullOrEmpty(recommendListHash))
+		{
+			navigationManager.NavigateTo("not found");
+		}
+		else
+		{
+			var recListResponse = await recommendationListService.GetRecommendListById(recommendListHash);
+
+
+			if (recListResponse == null)
+			{
+				navigationManager.NavigateTo("not found");
+			}
+			else
+			{
+				recommendList = recListResponse;
+				if (!string.IsNullOrEmpty(recommendationHash))
+				{
+					var recItemResponse = await recommendationItemService.GetRecommendationItemByHash(recommendationHash);
+					if (recItemResponse != null)
+					{
+						recommendItem = new RecommendedItemRequest
+						{
+							ProductId = recItemResponse.Value.ProductId,
+							Order = recItemResponse.Value.Order,
+							Notes = recItemResponse.Value.Notes,
+							RecommendationListId = recommendList.Value.Id
+						};
+						var prodResponse = await productService.GetProductById(recommendItem.ProductId);
+						if (prodResponse == null)
+						{
+							product = null;
+						}
+						else
+						{
+							product = prodResponse;
+							recommendItem.ProductCoverImg = product.Value.CoverImageURL!;
+							if (recommendItem.ProductCoverImg == null)
+								recommendItem.ProductCoverImg = "";
+							recommendItem.ProductName = product.Value.Name;
+						}
+					}
+					else
+					{
+						var prodResponse = await productService.GetProductById(productId);
+						if (prodResponse == null)
+						{
+							product = null;
+						}
+						else
+						{
+							product = prodResponse;
+						}
+					}
+				}
+			}
+			await SetPageTitle($"Editng Recommendation for {product.Value.Name} - GoMontag");
+			isLoading = false;
+		}
+	}
+
+	private async Task OnHandleSubmit()
+	{
+		var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+		if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+		if (serverUserRole == null || serverUserRole.Count == 0)
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+		if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+		{
+			navigationManager.NavigateTo("notfound");
+			return;
+		}
+		if (!string.IsNullOrEmpty(recommendListHash) && !string.IsNullOrEmpty(recommendationHash))
+		{
+			await recommendationItemService.UpdateHashedItem(recommendationHash, recommendItem);
+			navigationManager.NavigateTo($"/recommend/{recommendListHash}");
+		}
+	}
+}

@@ -1,0 +1,224 @@
+﻿@using Blazorise
+@using GoMontag_WebApp.Client.Shared.Buttons.Formats
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject IAvailabilityClientToServerComponentService AvailabilityService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<hr />
+@if (isLoading)
+{
+    <p><strong>Loading In Available Stores Please Wait...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}else{
+    @if(totalAvailabilities == 0)
+    {
+    <div class="availabilities-container">
+        <h3>Currently No Listed Available Places to Purchase this Format.</h3>
+        <AuthorizeView Roles="Admin, Moderator" Context="authState">
+            <Authorized>
+                @* <button class="btn btn-primary" mb-2 @onclick="CreateAvailability">
+                    Create Availability
+                </button> *@
+                    <a class="btn btn-primary" href="/formats/@CreateIDHash(FormatId)/availabilities/create">
+                        <i class="bi bi-plus-square"></i> Create Availability
+                    </a>
+            </Authorized>
+        </AuthorizeView>
+        <br />
+        </div>
+    }
+    else
+    {
+    <div class="availabilities-container">
+        <h3>Available Places for Purchase</h3>
+        <AuthorizeView Roles="Admin, Moderator" Context="authState">
+            <Authorized>
+                    <a class="btn btn-primary" href="/formats/@CreateIDHash(FormatId)/availabilities/create">
+                        <i class="bi bi-plus-square"></i> Create Availability
+                    </a>
+                <br />
+            </Authorized>
+        </AuthorizeView>
+            <div class="currency-select">
+                <select class="form-select" @bind="SelectedCode">
+                    <option value="USD">$ - USD</option>
+                    <option value="CAD">$ - CAD</option>
+                    <option value="EUR">&#x20AC - EUR</option>
+                </select>
+            </div>
+        <QuickGrid Items="filteredAvailabilities" Pagination="paginationState">
+            <TemplateColumn>
+                <ChildContent Context="a">
+                    @if (!string.IsNullOrEmpty(a.Store.LogoURL))
+                    {
+                         <a target="_blank" rel="noopener noreferrer" href="@a.URL"><img src="@a.Store.LogoURL" alt="@a.Store.Name Logo" style=" min-width: 60px; max-width: 60px; height:auto; max-height: 75px;" /></a>
+                    }
+                    else
+                    {
+                            <a target="_blank" rel="noopener noreferrer" href="@a.URL">@a.Store.Name</a>
+                    }
+                </ChildContent>
+            </TemplateColumn>
+            <PropertyColumn Property=" a => a.Price" Title="Price" Sortable="true" Class="custom-class"/>
+            <TemplateColumn Title="" Class="custom-class">
+                <ChildContent Context="a">
+                     <a class="btn btn-primary" target="_blank" href="@a.URL"><i class="bi bi-cart4"></i>Purchase</a>
+                </ChildContent>
+            </TemplateColumn>
+            <TemplateColumn Context="availability" Class="custom-class">
+                <AuthorizeView Roles="Admin, Moderator" Context="authState">
+                    <Authorized>
+                            <a class="btn btn-primary" href="/formats/@CreateIDHash(FormatId)/availabilities/@CreateAvailHash(availability.Id)/edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                    </Authorized>
+                </AuthorizeView>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+
+    <Paginator State="@paginationState" />
+    
+
+
+	}
+}
+
+<style>
+    .custom-class {
+        column-gap: 0px;
+        font-size: 0.75rem;
+        text-size-adjust: auto;
+        min-width: 0px;
+        max-width: 120px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+        padding: 0.25rem 0.5rem !important;
+        border-collapse: collapse;
+    }
+    
+</style>
+
+
+
+@code {
+    [Parameter]
+    public int FormatId { get; set; }
+    private string formatFilter = string.Empty;
+    private int totalAvailabilities = 0;
+
+    private bool isLoading = true;
+
+    PaginationState paginationState = new PaginationState { ItemsPerPage = 5 };
+
+    private string? SelectedCode = "USD";
+
+    private List<AvailabilityResponse> availabilities = new List<AvailabilityResponse>();
+    private IQueryable<AvailabilityResponse>? queryableAvailabilities;
+    private IQueryable<AvailabilityResponse>? filteredAvailabilities => queryableAvailabilities?.Where(f => f.Store.Name.Contains(formatFilter, StringComparison.OrdinalIgnoreCase) && f.CurrencyCode == SelectedCode);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (FormatId > 0)
+        {
+            await LoadAvailabilities();
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadAvailabilities()
+    {
+        try
+        {
+            var response = await AvailabilityService.GetAvailabilitiesByFormatId(FormatId);
+            queryableAvailabilities = response.AsQueryable();
+            totalAvailabilities = queryableAvailabilities.Count();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+    }
+
+    private async Task GoToPageAsync(int pageIndex)
+    {
+        await paginationState.SetCurrentPageIndexAsync(pageIndex);
+    }
+
+    private void SetSelectedCurrency()
+    {
+        var availableCurrencies = queryableAvailabilities?
+            .Select(a => a.CurrencyCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (availableCurrencies is null || availableCurrencies.Count == 0)
+        {
+            SelectedCode = "USD";
+            return;
+        }
+
+        SelectedCode = availableCurrencies.Contains("USD", StringComparer.OrdinalIgnoreCase)
+            ? "USD"
+            : availableCurrencies.First();
+    }
+
+    private string? PageButtonClass(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "current" : null;
+
+    private string? AriaCurrentValue(int pageIndex) => paginationState.CurrentPageIndex == pageIndex ? "page" : null;
+
+    private int DecodeHash(string hash)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var realId = sqids.Decode(hash).Single();
+        return realId;
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+    private string CreateAvailHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+    private void CreateAvailability()
+    {
+        NavigationManager.NavigateTo($"/formats/{CreateIDHash(FormatId)}/availabilities/create");
+    }
+
+    private void EditAvailability(int availabilityId)
+    {
+        NavigationManager.NavigateTo($"/formats/{CreateIDHash(FormatId)}/availabilities/{CreateAvailHash(availabilityId)}/edit");
+    }
+
+    private async void OpenStorePage(string url)
+    {
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+}

@@ -1,0 +1,102 @@
+﻿@inject IFormatClientToServerComponentService FormatService
+@inject IFormatImageClientToServerComponentService FormatImageService
+@page "/formats/{formatHash}/images/{ImageHash}"
+@using GoMontag_WebApp.Client.Shared.Buttons.FormatImages
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+@if (!isLoading && formatImage != null)
+{
+    <PageTitle>@formatImage.ImageName - GoMontag</PageTitle>
+    <div class="img-details">
+        <h2>Used In <a href="@($"/products/view/{product!.Slug}/formats/{FormatHash}")">@product!.Name : @format.Value.Type - @format.Value.Edition</a> </h2>
+        <hr />
+        <h3>@formatImage.ImageName</h3>
+        <a href="@formatImage.ImageUrl"><img src="@formatImage.ImageUrl" alt="@formatImage.AltText" width="@formatImage.Width"/></a>
+    </div>
+    <div class="img-info">
+        <br />
+        <h3>Uploaded by: <a href="/users/@formatImage.UserName" target="_blank">@formatImage.UserName</a></h3>
+        <h4>Uploaded: @formatImage.CreatedDate UTC</h4>
+        @if (!string.IsNullOrEmpty(formatImage.AltText))
+        {
+            <h4>Original Alt Text: @formatImage.AltText</h4>
+        }
+        @if (!string.IsNullOrEmpty(formatImage.UpdatedAltText))
+        {
+            <h4>Updated Alt Text: @formatImage.UpdatedAltText</h4>
+        }
+        @if(!string.IsNullOrEmpty(formatImage.LastUserUpdate) && formatImage.LastUpdatedDate != null)
+        {
+            <p><strong>Last Updated By:</strong><a href="/users/@formatImage.LastUserUpdate" target="_blank">@formatImage.LastUserUpdate</a></p>
+            <p><strong>Last Updated: </strong> @formatImage.LastUpdatedDate</p>
+        }
+        <br />
+    </div>
+    <div class="delete-button">
+        <AuthorizeView Roles="Admin, Moderator" Context="authState">
+            <Authorized>
+                <a class="btn btn-danger" href="/formats/@FormatHash/images/@ImageHash/Delete"> Delete Image</a>
+                <hr />
+                <FormatImagesFromFormatGrid FormatHash="@FormatHash"/>
+                <br />
+            </Authorized>
+        </AuthorizeView>
+    </div>
+    
+}
+
+
+@code {
+    [Parameter]
+    public string? FormatHash { get; set; }
+    [Parameter]
+    public string? ImageHash { get; set; }
+
+    private FormatResponse? format { get; set; }
+    private FormatImageResponse? formatImage { get; set; }
+    private ProductResponseJustCategoryId? product { get; set; }
+
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (FormatHash != null)
+        {
+            var result = await FormatService.GetFormatByID(FormatHash);
+            if (result == null)
+            {
+                format = null;
+                formatImage = null;
+            }
+            else
+            {
+                format = result;
+                if (!string.IsNullOrEmpty(ImageHash))
+                {
+                    var formatResult = await FormatImageService.GetFormatImageById(ImageHash);
+                    if (formatResult == null)
+                    {
+                        formatImage = null;
+                    }
+                    else
+                    {
+                        formatImage = formatResult;
+                        product = format.Value.Product;
+                    }
+                }
+            }
+        }
+        isLoading = false;
+    }
+    // private async Task DeleteFormatImg(int imageId)
+    // {
+    //     var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Do you really want to delete this image?");
+    //     if (confirmed)
+    //     {
+    //         await FormatImageService.DeleteFormatImage(imageId);
+    //         NavigationManager.NavigateTo($"/products/view/{product.Slug}/formats/{FormatHash}");
+    //     }
+    // }
+
+}

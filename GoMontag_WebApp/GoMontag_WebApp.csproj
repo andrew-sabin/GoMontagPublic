@@ -1,0 +1,88 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+	<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Azure.Identity" Version="1.21.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+		<PackageReference Include="MailKit" Version="4.17.0" />
+		<PackageReference Include="Mapster" Version="10.0.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.OData" Version="9.5.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Azure" Version="1.14.0" />
+		<PackageReference Include="MimeKit" Version="4.17.0" />
+		<PackageReference Include="Scalar.AspNetCore" Version="2.16.16" />
+		<PackageReference Include="Smtp2Go.ApiClient" Version="0.0.5" />
+		<PackageReference Include="Sqids" Version="3.2.1" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Filters" Version="10.0.1" />
+		<PackageReference Include="GoogleCaptchaComponent" Version="6.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AngleSharp" Version="1.5.2" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.29.0" />
+		<PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+		<PackageReference Include="Blazored.Typeahead" Version="4.7.0" />
+		<PackageReference Include="Blazorise.Captcha" Version="2.2.2" />
+		<PackageReference Include="Blazorise.Captcha.ReCaptcha" Version="2.2.2" />
+		<PackageReference Include="BlazorSortable" Version="8.1.0" />
+		<PackageReference Include="BlazorTextDiff" Version="2026.2.23.33037" />
+		<PackageReference Include="GoogleCaptchaComponent" Version="6.0.0" />
+		<PackageReference Include="Mapster" Version="10.0.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+		<PackageReference Include="Radzen.Blazor" Version="11.1.7" />
+		<PackageReference Include="Sqids" Version="3.2.1" />
+		<PackageReference Include="Syncfusion.Blazor.DataForm" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.DocIO.NET" Version="34.1.32" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+		<PackageReference Include="Syncfusion.Blazor.Core" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Blazor.Themes" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Licensing" Version="34.1.32" />
+		<PackageReference Include="Tinify" Version="1.9.0" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EasyAppDev.Blazor.AutoComplete-main\src\EasyAppDev.Blazor.AutoComplete.OData\EasyAppDev.Blazor.AutoComplete.OData.csproj" />
+    <ProjectReference Include="..\EasyAppDev.Blazor.AutoComplete-main\src\EasyAppDev.Blazor.AutoComplete\EasyAppDev.Blazor.AutoComplete.csproj" />
+    <ProjectReference Include="..\GoMontag,Shared\GoMontag,Shared.csproj" />
+    <ProjectReference Include="..\GoMontag_WebApp.Client\GoMontag_WebApp.Client.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Components\Pages\Entities\Availabilities\" />
+    <Folder Include="Components\Pages\Entities\Categories\" />
+    <Folder Include="Components\Pages\Entities\Formats\" />
+    <Folder Include="Components\Pages\Entities\FormatTypes\" />
+    <Folder Include="Components\Pages\Entities\NewsBlogs\" />
+    <Folder Include="Components\Pages\Entities\Products\ShowProductButtons\" />
+    <Folder Include="Components\Pages\Entities\RecommendationLists\" />
+  </ItemGroup>
+
+</Project>

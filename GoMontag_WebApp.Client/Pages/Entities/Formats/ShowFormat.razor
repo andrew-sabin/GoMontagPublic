@@ -1,0 +1,602 @@
+﻿@page "/products/view/{ProductSlug}/formats/{HashedId}"
+@inject IFormatClientToServerComponentService FormatService
+@inject IFormatTypeClientToServerComponentService FormatTypeService
+@inject IFormatImageClientToServerComponentService FormatImageService
+@inject IUserClientToServerComponentService UserService
+@inject IProductClientToServerComponentService productService
+@inject IUserTimeZoneClientService TimeZoneService
+@inject IFormatRevisionClientToServerComponentService FormatRevisionService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using GoMontag_WebApp.Client.Pages.Entities.Accounts.Users
+@using GoMontag_WebApp.Client.Shared.Buttons.Formats
+@using GoMontag_WebApp.Helpers
+@using GoMontag_WebApp.Client.Pages.Entities.Availabilities
+@using GoMontag_WebApp.Client.Shared
+
+<div class="format-page-grid">
+<div class="left-column">
+</div>
+<div class="main-content-column">
+@if (isLoading)
+{
+	@if (product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item">Products</li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+		<p><strong>Loading In Format Information Please Wait...</strong></p>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products/all/?title=@product.Value.Name&page=1">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@ProductSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">Unknown</li>
+			</ol>
+		</nav>
+		<p><strong>Loading In Format Information Please Wait...</strong></p>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+}
+else if (isLoading == false && format != null && product != null)
+{
+	@if (product == null && formatRevision != null && format != null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item">Products</li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">@format.Value.Type - @format.Value.Edition</li>
+			</ol>
+		</nav>
+		<div class="spinner-border" role="status">
+			<span class="visually-hidden">Loading...</span>
+		</div>
+	}
+	else if (product != null && formatRevision != null && format != null)
+	{
+		<PageTitle>@product.Value.Name : @format.Value.Type - @format.Value.Edition - GoMontag</PageTitle>
+		<HeadContent>
+			<link rel="canonical" href="https://www.gomontag.com/products/view/@ProductSlug/formats/@HashedId" />
+			<meta name="keywords" content="Ownership, @product.Value.Name, @product.Value.CategoryName,
+					@format.Value.Type, @format.Value.Edition" />
+			<meta name="description" content="Format Information for @product.Value.Name : @format.Value.Type - @format.Value.Edition" />
+			<meta name="og:title" content="@product.Value.Name : @format.Value.Type - @format.Value.Edition - GoMontag" />
+			<meta property="og:url" content="https://www.gomontag.com/products/view/@ProductSlug/formats/@HashedId" />
+			<meta property="og:description" content="Format Information for @product.Value.Name : @format.Value.Type - @format.Value.Edition" />
+					@if (format!.Value.CoverImageUrl == null || format.Value.CoverImageUrl == "")
+					{
+						<meta name="image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+						<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+					}
+					else
+					{
+						<meta name="image" content="@format.Value.CoverImageUrl" />
+						<meta property="og:image" content="@format.Value.CoverImageUrl" />
+					}
+					@* Twitter Meta Tags *@
+					<meta name="twitter:card" content="summary">
+					<meta name="twitter:image" content="@product.Value.CoverImageURL" />
+					<meta name="twitter:site" content="https://www.gomontag.com/products/view/@ProductSlug/formats/@HashedId" />
+					<meta name="twitter:title" content="@product.Value.Name : @format.Value.Type - @format.Value.Edition - GoMontag" />
+					<meta name="twitter:description" content="Format Information for @product.Value.Name : @format.Value.Type - @format.Value.Edition" />
+					@if (format!.Value.CoverImageUrl == null || format.Value.CoverImageUrl == "")
+					{
+						<meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+					}
+					else
+					{
+						<meta name="twitter:image" content="@format.Value.CoverImageUrl" />
+					}
+				</HeadContent>
+				
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item"><a href="/products/all/?title=@product.Value.Name&page=1">Products</a></li>
+				<li class="breadcrumb-item"><a href="/products/view/@ProductSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">@format!.Value.Type - @format.Value.Edition</li>
+			</ol>
+		</nav>
+		<div class="product-display-container">
+			<div class="product-details-column">
+				<h1><a href="/products/view/@ProductSlug">@product.Value.Name</a>: @format.Value.Type - @format.Value.Edition</h1>
+			</div>
+		</div>
+	}
+	<div class="format-container-grid">
+		<div class="format-display-container">
+			<div class="format-image-column">
+				@if (format!.Value.CoverImageUrl == null || format.Value.CoverImageUrl == "")
+				{
+					<img src="https://images.gmntgstrg.com/defaultandresourceimages/vecteezy_default-image-missing-placeholder_48910778.jpg"
+						 class="img-thumbnail"
+						 style="max-width: min(200px, 100%); max-height: 300px;"
+						 alt="Missing Image Picture Created By: Khanh Nguyen" />
+				}
+				else
+				{
+					<img src="@format.Value.CoverImageUrl"
+						 style="max-width: min(300px, 100%); max-height: 300px;"
+						 class="img-thumbnail" />
+				}
+			</div>
+			<div class="format-details-column">
+				@if (GetEnumDisplayGroup(formatRevision!.Value.OwnershipLevel) == "Not Likely")
+				{
+					<div class="p-3 mb-2 rounded-4 bg-danger bg-opacity-50">
+						<p class="text-black"><strong>Ownership:</strong> @GetEnumDisplayName(formatRevision!.Value.OwnershipLevel)</p>
+						<p class="text-black"><strong>What it means:</strong> @GetEnumDisplayDescription(formatRevision!.Value.OwnershipLevel)</p>
+					</div>	
+				}
+				else if (GetEnumDisplayGroup(formatRevision!.Value.OwnershipLevel) == "Missing Content")
+				{
+					<div class="p-3 mb-2 rounded-4 bg-warning bg-opacity-50">
+						<p class="text-black"><strong>Ownership:</strong> @GetEnumDisplayName(formatRevision!.Value.OwnershipLevel)</p>
+						<p class="text-black"><strong>What it means:</strong> @GetEnumDisplayDescription(formatRevision!.Value.OwnershipLevel)</p>
+					</div>
+				}
+				else if (GetEnumDisplayGroup(formatRevision!.Value.OwnershipLevel) == "Fully Owned")
+				{
+					<div class="p-3 mb-2 rounded-4 bg-success bg-opacity-50">
+						<p class="text-black"><strong>Ownership:</strong> @GetEnumDisplayName(formatRevision!.Value.OwnershipLevel)</p>
+						<p class="text-black"><strong>What it means:</strong> @GetEnumDisplayDescription(formatRevision!.Value.OwnershipLevel)</p>
+					</div>
+				}
+				<p><strong>Release Date:</strong> @format.Value.ReleaseDate</p>
+
+				
+				@if (formatRevision.Value.IsInPrint)
+				{
+					<p><strong>Is it still being produced?: </strong><span class="badge bg-success">Yes</span></p>
+				}
+				else
+				{
+					<p><strong>Is it still being produced?: </strong><span class="badge bg-danger">No</span></p>
+				}
+				@if (formatRevision.Value.IsAiAssisted)
+				{
+					<div class="p-3 mb-2 rounded-4 bg-warning bg-opacity-25">
+						<p><strong><i class="bi bi-robot"></i> Format is AI Assisted</strong></p>
+						<p><strong>How AI is used:</strong></p>
+						<p>@formatRevision.Value.AIAssistsWith</p>
+					</div>
+				}
+				<div class="format-user-info">
+					@if (format.Value.CreatorId != null)
+					{
+						<p><small><strong>Article Created By:</strong></small></p>
+						<DisplayUserInfo UserId="@format.Value.CreatorId" />
+					}
+						<p><small><strong>Last Modified:</strong> @userModifiedDate.ToString("f") UTC</small></p>
+					@if (formatRevision.Value.ModifierId != null)
+					{
+						<p><small><strong>Last Edited By:</strong></small></p>
+						<DisplayUserInfo UserId="@formatRevision.Value.ModifierId" OnlyShowName="true"/>
+					}
+				</div>
+				@if (format.Value.IsLocked)
+				{
+					<div class="format-locked">
+						@if (formatRevision.Value.ModifierId != null)
+						{
+							<h4>Locked By:</h4>
+							<DisplayUserInfo UserId="@format.Value.LockedByUser" />
+						}
+						<p><strong>Locked: </strong>@format.Value.lockedReason</p>
+					</div>
+				}
+				<AuthorizeView Roles="Admin, Moderator" Context="authState">
+					<Authorized>
+						<div class="format-lock-button">
+							@if (!format.Value.IsLocked)
+							{
+								<LockFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Lock" />		
+							}
+							else
+							{
+								<LockFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Unlock" />		
+							}
+
+						</div>
+						<div class="format-info-request">
+							@if (!format.Value.EditRequested)
+							{
+								<RequestInformationFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Request Info" />
+							}
+							else
+							{
+								<RequestInformationFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Edit Info Request" />
+							}
+						</div>
+					</Authorized>
+				</AuthorizeView>
+				<br />
+				@if(@format.Value.IsLocked == false)
+				{
+					<AuthorizeView Roles="Admin, Moderator, AlphaTester, User" Context="authState">
+						<Authorized>
+							<div class="format-edit-button">
+								<EditFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Edit Format"/>
+							</div>
+						</Authorized>
+					</AuthorizeView>
+				}
+				else
+				{
+					<AuthorizeView Roles="Admin, Moderator" Context="authState">
+						<Authorized>
+							<div class="format-edit-button">
+								<EditFormatButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="Edit Format"/>
+							</div>
+						</Authorized>
+						<NotAuthorized>
+							<div class="format-edit-button">
+								<button class="btn btn-primary" disabled>
+									Edit Format
+								</button>
+							</div>
+						</NotAuthorized>
+					</AuthorizeView>		
+				}		
+			</div>
+			
+		</div>
+			</div>
+			<div class="format-availability-column">
+				@if (formatType != null && formatType.Value.HasIssue && !String.IsNullOrEmpty(formatType.Value.IssueURL))
+				{
+					<div class="format-warning">
+						<h3><i class="bi bi-exclamation-square-fill"></i> Format Warning:</h3>
+						<a target="_blank" rel="noopener noreferrer" href="@formatType.Value.IssueURL"><strong>@formatType.Value.Issue</strong></a>
+					</div>
+				}
+				else if (formatType != null && formatType.Value.HasIssue && String.IsNullOrEmpty(formatType.Value.IssueURL))
+				{
+					<div class="format-warning">
+						<h3><i class="bi bi-exclamation-square-fill"></i> Format Warning:</h3>
+						<p><strong>@format.Value.FormatType.Issue</strong></p>
+					</div>
+				}
+				<br />
+				@if (product != null && product.Value.HasIssue && !String.IsNullOrEmpty(product.Value.IssueURL))
+				{
+					<div class="product-warning">
+						<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+						<a target="_blank" rel="noopener noreferrer" href="@product.Value.IssueURL"><strong>@product.Value.Issue</strong></a>
+					</div>
+					<br />
+				}
+				else if (product != null && product.Value.HasIssue && String.IsNullOrEmpty(product.Value.IssueURL))
+				{
+					<div class="product-warning">
+						<h3><i class="bi bi-exclamation-triangle-fill"></i> Product Warning: </h3>
+						<p><strong>@product.Value.Issue</strong></p>
+					</div>
+					<br />
+				}
+				@if (format.Value.EditRequested)
+				{
+					<div class="format-edit-request">
+						<h3><i class="bi bi-question-circle-fill"></i> More Information Requested</h3>
+						<p><strong>Requesting:</strong><br />@format.Value.InformationRequested</p>
+					</div>
+				}
+				<div class="format-availability-div">
+					
+					<ListAvailabilities FormatId="@format.Value.Id" />
+					<EbayButton productName="@product.Value.Name" formatType="@format.Value.Type" formatEdition="@format.Value.Edition" ButtonText="Search Ebay" />
+				</div>
+			</div>
+			<div class="format-review-column">
+				<hr />
+				<AuthorizeView Roles="Admin, Moderator" Context="authState">
+					<Authorized>
+						<ViewRevisionsButton productSlug="@ProductSlug" hashedFormatId="@HashedId" ButtonText="View Revisions" />
+					</Authorized>
+				</AuthorizeView>
+				
+				<h3>More Information:</h3>
+				@if (isLoading == false && format != null && product != null)
+				{
+					<div class="format-toc">
+						<TableOfContents HTMLContent="@formatDescription" Slug="@ProductSlug" formatHash="@HashedId" />
+					</div>
+				}
+				<hr />
+				<div class="format-description-container">
+					@((MarkupString)formatDescription)
+				</div>
+				<br />
+				<hr />
+				
+			</div>
+			<div class="format-lightbox">
+				<Lightbox ImageUrls="imageUrls" ImageAlts="imageAlts" ShowNavigation="true" ShowCounter="true" ShowGallary="true" />
+			</div>
+			<div class="format-others">
+				<h3 id="available">Formats Available</h3>
+				<FormatsPerProduct ProductSlug="@product!.Value.Slug" ProductId="product!.Value.Id"
+								   TypeTitle="@product!.Value.Category.TypeTitle"
+								   EditionTitle="@product!.Value.Category.EditionTitle"/>
+			</div>
+			
+			
+			
+}
+else
+{
+	@if (product == null)
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item">Products</li>
+				<li class="breadcrumb-item">Unknown</li>
+				<li class="breadcrumb-item active">404 Format Not Found</li>
+			</ol>
+		</nav>
+	}
+	else
+	{
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="/">Home</a></li>
+				<li class="breadcrumb-item">Products</li>
+				<li class="breadcrumb-item"><a href="/products/view/@ProductSlug">@product.Value.Name</a></li>
+				<li class="breadcrumb-item active">404 Format Not Found</li>
+			</ol>
+		</nav>
+	}
+
+
+	<h2>404 Format Not Found</h2>			
+}
+	</div>
+	<div class="right-column"></div>
+</div>
+@code {
+	[Parameter]
+	public int formatId { get; set; }
+	[Parameter]
+	public int productId { get; set; }
+	[Parameter]
+	public string? ProductSlug { get; set; }
+	[Parameter]
+	public string? HashedId { get; set; }
+	[Parameter]
+	public string? formatSlug { get; set; }
+
+	private bool isLoading = true;
+
+	private DateTimeOffset userModifiedDate;
+
+	private FormatResponse? format = new FormatResponse();
+	private FormatRevisionResponse? formatRevision = new FormatRevisionResponse();
+	private ProductResponse? product = new();
+	private FormatTypeResponse? formatType = new FormatTypeResponse();
+
+	private string? formatDescription { get; set; } = string.Empty;
+
+	// private string? 
+
+	private string? ownershipInformation { get; set; }
+
+	private Lightbox lightbox = new Lightbox();
+	private List<string> imageUrls = new();
+	private List<string> imageAlts = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (HashedId != null)
+		{
+			var result = await FormatService.GetFormatByID(HashedId);
+			if (result == null)
+			{
+				format = null;
+				if (ProductSlug != null)
+					product = await productService.GetProductBySlug(ProductSlug);
+			}
+			else
+			{
+				format = result;
+				if (ProductSlug != null)
+					product = product = await productService.GetProductBySlug(ProductSlug);
+				else
+				{
+					product = await productService.GetProductBySlug(format.Value.Product!.Slug!);
+				}
+				formatType = await FormatTypeService.GetFormatTypeByID(result.Value.FormatTypeId);
+
+				// if (format.Value.formatrevisionid <= 0)
+				// {
+				// 	throw new Exception("Format page could not load most recent revision. Invalid revision id.");
+				// }
+				formatRevision = await FormatRevisionService.GetRevisionById(format.Value.formatrevisionid);
+				if (formatType != null && formatRevision != null)
+				{
+					ownershipInformation = GetEnumDisplayDescription(formatRevision.Value.OwnershipLevel);
+					userModifiedDate = TimeZoneService.ConvertToUserTime(formatRevision.Value.ModifiedDate);
+					ExtractImages((FormatRevisionResponse)formatRevision);
+					formatDescription = await SanitizeHTML(formatRevision.Value.Description);
+				}
+				else
+				{
+					format = null;
+					product = product = await productService.GetProductBySlug(ProductSlug!);
+				}
+
+			}
+		}
+		else
+		{
+			format = null;
+		}
+
+		isLoading = false;
+	}
+
+	private string GetEnumDisplayName(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Name ?? value.ToString();
+	}
+
+	private string GetEnumDisplayDescription(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.Description ?? value.ToString();
+	}
+
+	private string GetEnumDisplayGroup(Enum value)
+	{
+		var field = value.GetType().GetField(value.ToString());
+		var attr = field?.GetCustomAttributes(typeof(DisplayAttribute), false)
+						.Cast<DisplayAttribute>()
+						.FirstOrDefault();
+		return attr?.GroupName ?? value.ToString();
+	}
+
+	/* Getting Images From Description */
+	private void ExtractImages(FormatRevisionResponse formatRevision)
+	{
+		imageUrls = HTMLImageExtractor.ExtractImageUrls(formatRevision.Description);
+		imageAlts = HTMLImageExtractor.ExtractImageAlts(formatRevision.Description);
+	}
+
+	private string CreateIDHash(int Id)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 0,
+			Alphabet = "",
+		});
+		var hash = sqids.Encode(Id);
+		return hash;
+	}
+
+	private int DecodeHash(string hash)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 0,
+			Alphabet = "",
+		});
+		var realId = sqids.Decode(hash).Single();
+		return realId;
+	}
+
+	private async void HandleImageClick(string imageUrl)
+	{
+		var index = imageUrls.FindIndex(url => url == imageUrl);
+		if (index >= 0 && lightbox != null)
+		{
+			lightbox.ShowImage(index);
+		}
+	}
+
+	private async Task<string> SanitizeHTML(string html)
+	{
+		if (string.IsNullOrWhiteSpace(html)) return html;
+
+		html = SanitizeImageMarkup(html);
+		html = SanitizeIframe(html);
+
+		return html;
+	}
+
+	private string SanitizeImageMarkup(string html)
+	{
+		if (string.IsNullOrWhiteSpace(html)) return html;
+		// Remove width and height attributes
+		html = Regex.Replace(
+			html,
+			@"\s*(height)\s*=\s*[""'][^""']*[""']",
+			"",
+			RegexOptions.IgnoreCase);
+		// Strip width/height (and min/max variants) from the style attribute
+		html = Regex.Replace(
+			html,
+			@"(style\s*=\s*[""'])([^""']*)([""'])",
+			m =>
+			{
+				var cleaned = Regex.Replace(
+					m.Groups[2].Value,
+					@"(^|;)\s*(width|height|min-width|max-width|min-height|max-height)\s*:[^;]*",
+					"",
+					RegexOptions.IgnoreCase);
+				return m.Groups[1].Value + cleaned.Trim(';', ' ') + m.Groups[3].Value;
+			},
+			RegexOptions.IgnoreCase);
+		return html;
+	}
+
+	private string SanitizeIframe(string html)
+	{
+		if (string.IsNullOrWhiteSpace(html)) return html;
+		var iframePattern = @"<iframe\s([^>]*)>";
+		var replacement = @"<div class=""iframe-container"" style=""position: relative; width: 100%; max-width: 560px; max-height: 315px;
+		padding-bottom: 265px; padding-top:50px;"";><iframe $1>";
+
+		html = Regex.Replace(html, iframePattern, replacement, RegexOptions.IgnoreCase);
+
+		html = Regex.Replace(html, @"</iframe>", @"</iframe></div>", RegexOptions.IgnoreCase);
+
+		html = NormalizeIframeAttributes(html);
+
+		return html;
+	}
+
+
+	private string NormalizeIframeAttributes(string htmlContent)
+	{
+		// Any space between <iframe where there is 0 or more > whether that would be in the beginning of a paragraph or otherwise
+		string pattern = @"<iframe\s+([^>]*)>";
+		return Regex.Replace(htmlContent, pattern, match =>
+		{
+			string tagContent = match.Groups[1].Value;
+			//Any space betwen style= and anygroup or range between "" and replace it with an empty string
+			tagContent = Regex.Replace(tagContent, @"\s*style=""[^""]*""", "", RegexOptions.IgnoreCase);
+			//Any space betwen width= and anygroup or range between "" and replace it with an empty string
+			tagContent = Regex.Replace(tagContent, @"\s*width=""[^""]*""", "", RegexOptions.IgnoreCase);
+			//Any space betwen height= and anygroup or range between "" and replace it with an empty string
+			tagContent = Regex.Replace(tagContent, @"\s*height=""[^""]*""", "", RegexOptions.IgnoreCase);
+
+			return $@"<iframe width=""100%"" height=""315px"" style=""position: absolute; top: 0; left: 0; width: 100%; height: 315px;""{tagContent}>";
+		}, RegexOptions.IgnoreCase);
+	}
+
+	private void EditHashedFormat(string hashedId)
+	{
+		NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/{hashedId}/edit");
+	}
+	private void LockHashedFormat(string hashedId)
+	{
+		NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/{hashedId}/lock");
+	}
+	private void ViewRevisions(string hashedId)
+	{
+		NavigationManager.NavigateTo($"/products/view/{ProductSlug}/formats/{hashedId}/revisions");
+	}
+
+}

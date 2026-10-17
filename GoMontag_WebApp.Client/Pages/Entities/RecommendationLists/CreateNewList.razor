@@ -1,0 +1,115 @@
+﻿@page "/users/{UserName}/recommend/new"
+@inject IRecommendationListClientToServerComponentService recommendationListService
+@inject IUserClientToServerComponentService UserComponentService
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IAuthClientComponentService authService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<h3>Create New List</h3>
+<PageTitle>Creating New Recommendation List - GoMontag</PageTitle>
+@if(isLoading == false)
+{
+    <EditForm Model="recommendationList">
+        <DataAnnotationsValidator />
+        <div>
+            <label for="listName">Recommendation List Name:</label>
+            <InputText id="listName" class="form-control" @bind-Value="recommendationList.Name" />
+            <ValidationMessage For="@(() => recommendationList.Name)" />
+        </div>
+        <div>
+            <label for="listDescription">Description of List:</label>
+            <InputTextArea id="listDescription" class="form-control" @bind-Value="recommendationList.Description" />
+            <ValidationMessage For="@(() => recommendationList.Name)" />
+        </div>
+    </EditForm>
+
+    <button class="btn btn-primary" @onclick="HandleSubmit">Create New List</button>
+}
+
+
+<br />
+@code {
+    [Parameter]
+    public string? UserName { get; set; }
+
+    private bool isAuthorized = false;
+    private bool isLoading = true;
+
+    private ListRequest recommendationList = new();
+
+    private IJSObjectReference? module;
+
+
+    private async Task SetPageTitle(string title)
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("setTitle", title);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+    }
+
+    protected async override Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserName))
+        {
+            var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+            var currentUserName = user.Identity!.Name;
+            var serverUserRole = await UserComponentService.GetUserRole(currentUserName!);
+            if (serverUserRole == null || serverUserRole.Count == 0)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+            isAuthorized = string.Equals(currentUserName, UserName, StringComparison.OrdinalIgnoreCase);
+            if(isAuthorized == false)
+            {
+                NavigationManager.NavigateTo("notfound");
+                return;
+            }
+            await SetPageTitle($"Your Customization Options - GoMontag");
+            isLoading = false;
+        }
+        else
+        {
+            NavigationManager.NavigateTo("not found");
+        }
+    }
+    private async Task HandleSubmit()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+        if (serverUserRole == null || serverUserRole.Count == 0)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+        if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+        await recommendationListService.CreateNewList(recommendationList);
+        NavigationManager.NavigateTo($"/users/{UserName}");
+    }
+}

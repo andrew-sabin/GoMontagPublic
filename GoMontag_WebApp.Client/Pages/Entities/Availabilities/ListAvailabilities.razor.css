@@ -1,0 +1,89 @@
+﻿::deep quickgrid {
+    font-weight: 400; /* font-normal */
+    font-size: 0.875rem; /* text-sm */
+    line-height: 2.5rem; /* text-sm (adjusted) */
+    text-align: left; /* text-left */
+}
+
+::deep tbody .custom-table {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 0;
+    text-overflow: ellipsis;
+}
+
+::deep tbody tr {
+    background-color: rgba(0,0,0,0.04);
+}
+
+::deep tbody tr:nth-child(even) {
+    background: rgba(255,255,255,0.4);
+}
+
+.currency-select select {
+    width: 130px; /* Fixed width */
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+div.availabilities-container{
+    overflow-x:auto;
+}
+
+
+@media (max-width: 768px) {
+    ::deep quickgrid {
+        font-size: 0.75rem;
+        line-height: 1.75rem;
+    }
+
+    ::deep table {
+        border-collapse: collapse;
+    }
+
+    ::deep th,
+    ::deep td {
+        padding: 0.35rem 0.2rem;
+    }
+
+    ::deep .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    ::deep quickgrid {
+        font-size: 0.65rem;
+        line-height: 1.5rem;
+    }
+
+    ::deep th,
+    ::deep td {
+        font-size: 0.95rem;
+        padding: 0.25rem 0.1rem;
+    }
+
+    ::deep .btn {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.4rem;
+    }
+}
+
+@media(max-width: 440px) {
+
+    .currency-select select {
+        font-size: 0.75rem;
+        padding: 0.25rem;
+    }
+
+    .availabilities-container h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+    }
+}

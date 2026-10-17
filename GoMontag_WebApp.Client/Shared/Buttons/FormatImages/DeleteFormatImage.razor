@@ -1,0 +1,17 @@
+﻿@inject IFormatImageClientToServerComponentService FormatImageService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+
+
+@code {
+    [Parameter]
+    public int ImageId { get; set; }
+    [Parameter]
+    public string? FormatHash { get; set; }
+    [Parameter]
+    public string? ProductSlug { get; set; }
+
+    
+}

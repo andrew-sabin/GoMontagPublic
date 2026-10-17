@@ -1,0 +1,39 @@
+﻿@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+@if (ButtonText == "Lock")
+{
+    @* <button class="btn btn-primary" @onclick="@(() => NavigateToPage(UrlString))">
+        <i class="bi bi-key-fill"></i> @ButtonText
+    </button> *@
+
+    <a class="btn btn-primary" href="/products/view/@UrlString/lock">
+        <i class="bi bi-key-fill"></i> @ButtonText
+    </a>
+}
+else
+{
+    @* <button class="btn btn-primary" @onclick="@(() => NavigateToPage(UrlString))">
+        <i class="bi bi-unlock"></i> @ButtonText
+    </button> *@
+
+    <a class="btn btn-primary" href="/products/view/@UrlString/lock">
+        <i class="bi bi-unlock"></i> @ButtonText
+    </a>
+}
+
+
+@code {
+    [Parameter]
+    required public string UrlString { get; set; }
+    [Parameter]
+    required public string? ButtonText { get; set; }
+
+
+    private void NavigateToPage(string productSlug)
+    {
+        NavigationManager.NavigateTo($"/products/view/{productSlug}/lock");
+    }
+}
+
+

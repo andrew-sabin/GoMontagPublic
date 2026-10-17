@@ -1,0 +1,497 @@
+﻿@page "/recommend/{recommendListHash}"
+@inject IRecommendationItemClientToServerComponentService itemService
+@inject IRecommendationListClientToServerComponentService listService
+@inject IProductClientToServerComponentService productService
+@inject IUserClientToServerComponentService UserService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Text.Json
+@using Blazorise
+@using GoMontag_WebApp.Client.Pages.Entities.Products
+@* @using GoMontag.Client.Pages.Products *@
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+
+
+<div class="products-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		@if (itemAmount > 0 && isLoading == false)
+		{
+			<PageTitle>@recommendList!.Value.Name Recommendations - GoMontag</PageTitle>
+			<HeadContent>
+				<link rel="canonical" href="https://www.gomontag.com/recommend/@recommendListHash" />
+				<meta name="description" content="@recommendList!.Value.Description" />
+				<meta name="og:title" content="@recommendList!.Value.Name Recommendations - GoMontag" />
+				<meta property="og:url" content="https://www.gomontag.com/recommend/@recommendListHash" />
+				<meta property="og:description" content="@recommendList.Value.Description" />
+				@if (listUser != null)
+				{
+					<meta name="image" content="@listUser.Value.ProfileImageURL" />
+					<meta property="og:image" content="@listUser.Value.ProfileImageURL" />
+				}
+				else
+				{
+					<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+				}
+				<meta name="keywords" content="Video Games, Software, Tools, Appliances, Ownership, @recommendList.Value.Name, GoMontag" />
+				@* Twitter Meta Tags *@
+				<meta name="twitter:card" content="summary">
+				<meta name="twitter:site" content="https://www.gomontag.com/recommend/@recommendListHash" />
+				<meta name="twitter:title" content="@recommendList!.Value.Name Recommendations - GoMontag" />
+				<meta name="twitter:description" content="@recommendList.Value.Description" />
+				@if (listUser == null)
+				{
+					<meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+				}
+				else
+				{
+					<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+				}
+			</HeadContent>
+			
+			<div class="category-display">
+				<nav aria-label="breadcrumb">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item"><a href="/">Home</a></li>
+						<li class="breadcrumb-item"><a href="/users/@recommendList!.Value.UserName">@recommendList.Value.UserName User Page</a></li>
+						<li class="breadcrumb-item active">@recommendList!.Value.Name</li>
+					</ol>
+				</nav>
+			</div>
+
+			<h1>Recommendations: @recommendList!.Value.Name</h1>
+			<h3>@recommendList.Value.Description</h3>
+			<h4><strong>Recommendations By:</strong></h4>
+			<DisplayUserInfo UserId="@recommendList.Value.UserId" />
+			<br />
+			@if (isAuthorized)
+			{
+				<button class="btn btn-primary" type="button" onclick=@(() => EditItemOrder(recommendListHash!))>Edit List</button>
+			}
+			<p>Currently on Page: @QueryPage</p>
+			<div class="top-query-btns">
+				@if (QueryPage > 1)
+				{
+					<button class="btn btn-primary mx-2" onclick="@(() => FirstPage())">
+						First Page
+					</button>
+					<button class="btn btn-primary mx-2" onclick="@(() => PrevPage())">
+						<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+					</button>
+				}
+				else
+				{
+					<button class="btn btn-primary mx-2" disabled>
+						First Page
+					</button>
+					<button class="btn btn-primary mx-2" disabled>
+						<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+					</button>
+				}
+
+				@if (itemAmount == PageAmount)
+				{
+					<button class="btn btn-primary mx-2" onclick="@(() => NextPage())">
+						Next Page <i class="bi bi-arrow-right-square-fill"></i>
+					</button>
+				}
+				else
+				{
+					<button class="btn btn-primary mx-2" disabled>
+						Next Page <i class="bi bi-arrow-right-square-fill"></i>
+					</button>
+				}
+				<br />
+			</div>
+			@for(int i = 0; i < itemAmount; i++)
+			{
+				var product = products[i];
+				var recc = recommendedItems[i];
+				@if(product != null)
+				{
+					<div class="card my-4">
+						<div class="card-header">
+							<a href="products/view/@product.Value.Slug">
+								<h5>@product.Value.Name</h5>
+							</a>
+						</div> 
+						@* card header end *@
+						<div class="card-body">
+							<div class="product-container">
+								<div class="product-image-column">
+									@if (string.IsNullOrEmpty(product.Value.CoverImageURL))
+									{
+										<p>
+											<a href="/products/view/@product.Value.Slug">
+												<img src="images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+													 class="img-thumbnail"
+													 style="max-width: min(200px, 100%); max-height: 300px;"
+													 alt="Missing Image Picture Created By: Khanh Nguyen" />
+											</a>
+										</p>
+
+									}
+									else
+									{
+										<p>
+											<a href="/products/view/@product.Value.Slug">
+												<img src="@product.Value.CoverImageURL"
+													 style="max-width: min(200px, 100%); max-height: 200px;"
+													 class="img-thumbnail" />
+											</a>
+										</p>
+									}
+								</div>
+								@* end of product image column *@
+								<div class="product-details-column">
+									<p><strong>@product.Value.Category.Name</strong></p>
+									@if (string.IsNullOrEmpty(product.Value.Category.CreatorsTitle))
+									{
+										<p><strong>Created By:</strong> @product.Value.Creators</p>
+									}
+									else
+									{
+										<p><strong>@product.Value.Category.CreatorsTitle:</strong> @product.Value.Creators</p>
+									}
+									<p><strong>For Ages:</strong> @product.Value.ContentRating+</p>
+									<p><strong>First Released:</strong> @product.Value.ProductLaunchDate</p>
+
+									@if (product.Value.IsAIAssisted)
+									{
+										<p><i class="bi bi-robot"></i><b> AI Assisted</b></p>
+									}
+									@if (product.Value.ForMatureAudiences)
+									{
+										<p><i class="bi bi-exclamation-diamond-fill"></i><b>For Mature Audiences Only</b></p>
+									}
+								</div>
+								@* end of product details column*@
+								<div class="product-description-row">
+									<p><strong>Product Description:</strong></p>
+									<p>@product.Value.Description</p>
+									<hr />
+									<p><strong>Comments: </strong></p>
+									<p>@recc.Notes</p>
+									@if (isAuthorized)
+									{
+										<button class="btn btn-primary" onclick="@(() => EditNotes(recommendListHash!, recc))">Edit Notes</button>
+									}
+									<button class="btn btn-primary" onclick="@(() => ViewProduct(product.Value.Slug))">
+										View Product Details
+									</button>
+									@if (string.IsNullOrEmpty(product.Value.Category.FormatsTitle))
+									{
+										<button class="btn btn-primary" data-target="#productFormats"
+												@onclick="() => ShowFormats(product.Value.Id)"
+												aria-expanded="@(productId == product.Value.Id ? "true" : "false")"
+												area-controls="@("productFormats-{product.Value.Id}")">
+											@(productId == product.Value.Id ? "Hide Formats" : "Show Formats")
+										</button>
+									}
+									else
+									{
+										<button class="btn btn-primary" data-target="#productFormats"
+												@onclick="() => ShowFormats(product.Value.Id)"
+												aria-expanded="@(productId == product.Value.Id ? "true" : "false")"
+												area-controls="@("productFormats-{product.Value.Id}")">
+											@(productId == product.Value.Id ? $"Hide {product.Value.Category.FormatsTitle}" : $"Show {product.Value.Category.FormatsTitle}")
+										</button>
+									}
+									<AuthorizeView Roles="Admin, Moderator" Context="authState">
+										<Authorized>
+											<button class="btn btn-primary" onclick="@(() => EditProduct(product.Value.Slug))">
+												Edit Product
+											</button>
+										</Authorized>
+									</AuthorizeView>
+								</div>
+								@* end of product description row *@
+							</div>
+							@* end of product container *@
+						</div>
+						@* end of card body *@
+						<div class="@($"collapse {(productId == product.Value.Id ? "show" : "")}")" id="@($"productFormats-{product.Value.Id}")">
+							<div class="card card-body mt-2">
+								@if (productId == product.Value.Id)
+								{
+									<FormatsList ProductId="@product.Value.Id" ProductSlug="@product.Value.Slug" TypeTitle="@product.Value.Category.TypeTitle"
+												 EditionTitle="@product.Value.Category.EditionTitle" FromProdList=true />
+								}
+							</div>
+						</div>
+					</div>
+				}
+				else
+				{
+					<div class="card my-4">
+						<div class="card-header">
+							<h3>PRODUCT NOT FOUND</h3>
+						</div>
+						<div class="card-body">
+							<p><strong>Product was not found.</strong></p>
+							<p><strong>Comments: </strong></p>
+							<p>@recc.Notes</p>
+						</div>
+					</div>
+				}
+			}
+		}
+		else if (recommendList != null && isLoading == false && itemAmount <= 0)
+		{
+			<PageTitle>@recommendList!.Value.Name Recommendations - GoMontag</PageTitle>
+			<link rel="canonical" href="https://www.gomontag.com/recommend/@recommendListHash" />
+			<meta name="og:title" content="@recommendList!.Value.Name Recommendations - GoMontag" />
+			<meta property="og:url" content="https://www.gomontag.com/recommend/@recommendListHash" />
+			<meta property="og:description" content="@recommendList.Value.Description" />
+			<div class="category-display">
+				<nav aria-label="breadcrumb">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item"><a href="/">Home</a></li>
+						<li class="breadcrumb-item"><a href="/users/@recommendList!.Value.UserName">@recommendList.Value.UserName User Page</a></li>
+						<li class="breadcrumb-item active">@recommendList!.Value.Name</li>
+					</ol>
+				</nav>
+			</div>
+
+			<h2>@recommendList!.Value.Name</h2>
+			<h3>@recommendList.Value.Description</h3>
+			@if (isAuthorized)
+			{
+				<button class="btn btn-primary" type="button" onclick=@(() => EditItemOrder(recommendListHash!))>Edit List</button>
+			}
+			<p>End of results.</p>
+		}
+		else if(isLoading)
+		{
+			<p><strong>Loading In Recommendation List Please Wait...</strong></p>
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		}
+		else if(isLoading == false && recommendList == null)
+		{
+			<h2>Recommendation List Not Found</h2>
+			<div class="category-display">
+				<nav aria-label="breadcrumb">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item"><a href="/">Home</a></li>
+						<li class="breadcrumb-item active">Recommend List Not Found</li>
+					</ol>
+				</nav>
+			</div>
+		}
+		<div class="bottom-query-btns">
+			@if (QueryPage > 1)
+			{
+				<button class="btn btn-primary mx-2" onclick="@(() => FirstPage())">
+					First Page
+				</button>
+				<button class="btn btn-primary mx-2" onclick="@(() => PrevPage())">
+					<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+				</button>
+			}
+			else
+			{
+				<button class="btn btn-primary mx-2" disabled>
+					First Page
+				</button>
+				<button class="btn btn-primary mx-2" disabled>
+					<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+				</button>
+			}
+
+			@if (itemAmount == PageAmount)
+			{
+				<button class="btn btn-primary mx-2" onclick="@(() => NextPage())">
+					Next Page <i class="bi bi-arrow-right-square-fill"></i>
+				</button>
+			}
+			else
+			{
+				<button class="btn btn-primary mx-2" disabled>
+					Next Page <i class="bi bi-arrow-right-square-fill"></i>
+				</button>
+			}
+			<br />
+		</div>
+		
+		<p>Currently on Page: @QueryPage</p>
+	</div>
+	<div class="right-column"></div>
+</div>
+
+@code {
+	[Parameter]
+	public int recommendListId { get; set; }
+
+	[Parameter]
+	public string? recommendListHash { get; set; }
+
+	private int QueryPage { get; set; } = 1;
+	private int itemAmount { get; set; }
+
+	private bool isLoading = true;
+
+	const int PageAmount = 15;
+
+	private ListResponse? recommendList { get; set; }
+	private List<RecommendedItemResponse> recommendedItems = new List<RecommendedItemResponse>();
+	private List<ProductResponse?> products = new List<ProductResponse?>();
+
+	private int productId;
+
+	// Dialog Box Variables
+	private bool IsDialogVisible { get; set; } = false;
+	private RecommendedItemResponse? selectedItem = new();
+	private ProductResponse? selectedProduct = new();
+	private UserResponse? listUser = new();
+
+	// User Specific Variables
+	private bool isAuthorized = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if(!string.IsNullOrEmpty(recommendListHash))
+		{
+			recommendList = await listService.GetRecommendListById(recommendListHash!);
+			if (recommendList != null)
+			{
+				await ShowPage();
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var user = authState.User;
+				var currentUserName = user.Identity!.Name;
+				isAuthorized = string.Equals(currentUserName, recommendList.Value.UserName, StringComparison.OrdinalIgnoreCase);
+				if(currentUserName != null)
+					listUser = await UserService.GetUserAsync(currentUserName);
+				isLoading = false;
+			}
+			else
+			{
+				recommendList = null;
+				isLoading = false;
+			}
+		}
+		else
+		{
+			recommendList = null;
+			isLoading = false;
+		}
+	}
+
+	private void ShowFormats(int id)
+	{
+		if (productId == id)
+		{
+			return;
+		}
+		productId = id;
+		StateHasChanged();
+	}
+
+	private async Task ShowPage()
+	{
+		try
+		{
+			var response = await itemService.GetItemsByRecommendationListByPage(recommendListHash!, QueryPage, PageAmount);
+			if(response != null)
+			{
+				recommendedItems = response;
+				itemAmount = recommendedItems.Count();
+				products.Clear();
+				foreach(var item in recommendedItems)
+				{
+					var recProduct = item.ProductId;
+					var prod = await productService.GetProductById(recProduct);
+					if(prod != null)
+					{
+						products.Add(prod);
+					}
+					else
+					{
+						products.Add(null);
+					}
+				}
+			}
+		}
+		catch (JsonException ex)
+		{
+			Console.WriteLine($"Issue with getting results: {ex}");
+		}
+	}
+
+	private async Task FirstPage()
+	{
+		QueryPage = 1;
+		await ShowPage();
+	}
+
+	protected async Task NextPage()
+	{
+		if (itemAmount == PageAmount)
+		{
+			QueryPage++;
+			await ShowPage();
+		}
+	}
+
+	private async Task PrevPage()
+	{
+		if (QueryPage > 1)
+		{
+			QueryPage--;
+			await ShowPage();
+		}
+
+	}
+
+	private void ViewProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/view/{id}/");
+	}
+	private void ViewProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/");
+	}
+
+	private void EditItemOrder(string id)
+	{
+		NavigationManager.NavigateTo($"/recommend/{id}/edit");
+	}
+
+	private async Task EditNotes(string id, RecommendedItemResponse item)
+	{
+		var itemHash = GenerateItemHash(item.Id);
+		NavigationManager.NavigateTo($"/recommend/{id}/item/{itemHash}");
+	}
+
+	private void OpenDialog()
+	{
+		IsDialogVisible = true;
+	}
+	private void CloseDialog()
+	{
+		IsDialogVisible = false;
+	}
+
+	private void EditProduct(int id)
+	{
+		NavigationManager.NavigateTo($"/products/view/{id}/edit");
+	}
+	private void EditProduct(string slug)
+	{
+		NavigationManager.NavigateTo($"/products/view/{slug}/edit");
+	}
+
+	public static string GenerateItemHash(int id)
+	{
+		var sqids = new SqidsEncoder<int>(new()
+		{
+			MinLength = 0,
+			Alphabet = "",
+		});
+		var hash = sqids.Encode(id);
+		return hash;
+	}
+}

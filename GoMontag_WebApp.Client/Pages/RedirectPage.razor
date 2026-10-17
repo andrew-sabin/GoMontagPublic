@@ -1,0 +1,57 @@
+﻿@page "/redirect/"
+@using Microsoft.Extensions.Options
+@using System.Web
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<PageTitle>You Are Leaving GoMontag</PageTitle>
+@if (!isLoading && !string.IsNullOrEmpty(safeUrl))
+{
+    <div class="redirect-grid">
+        <div class="left-column"></div>
+        <div class="main-content-column">
+            <div class="site-warning">
+                <h3><i class="bi bi-exclamation-octagon-fill"></i> Warning! <i class="bi bi-exclamation-octagon-fill"></i></h3>
+                <hr />
+                <p>You are attempting to leave the site to go to:</p>
+                <h4>@safeUrl</h4>
+                <p>Please take a look at your destination before clicking continue.</p>
+                <p>
+                    <strong>
+                        If you believe that this is a suspecious link, or you know someone who is a victim of this link,
+                        <a href="/contact">Contact Me</a> and I'll get back to you as soon as possible!
+                    </strong>
+                </p>
+                <p>By clicking the button below, you agree that you trust this site shown above.</p>
+                <div class="site-continue-btn">
+                    <a class="btn btn-primary" target="_blank" href="@safeUrl">Click To Continue</a>
+                </div>
+                
+            </div>
+        </div>
+        <div class="right-column"></div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "url")]
+    public string? RedirectToURL { get; set; }
+    private string safeUrl = string.Empty;
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // [SupplyParameterFromQuery] already URL-decodes the value — do NOT decode again
+        if (Uri.TryCreate(RedirectToURL, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            safeUrl = uri.AbsoluteUri;
+        }
+        else
+        {
+            navigationManager.NotFound();   // .NET 10 helper
+        }
+        isLoading = false;
+    }
+
+}

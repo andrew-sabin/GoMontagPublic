@@ -1,0 +1,81 @@
+﻿@inject IProductClientToServerComponentService productService
+@inject IRecommendationItemClientToServerComponentService recommendationItemService
+@rendermode InteractiveServer
+
+@if(loading == false && notFound == false)
+{
+    <div class="card" style="min-height:265px; max-height: 400px;">
+        <div class="row g-0">
+            <div class="col-md-4">
+                @if (!string.IsNullOrEmpty(cardProduct!.Value.CoverImageURL))
+                {
+                    <a href="products/view/@cardProduct!.Value.Slug">
+                        <img src="@cardProduct!.Value.CoverImageURL"
+                             class="card-img-top" alt="@cardProduct.Value.Name Cover" style="max-width: 180px;">
+                    </a>
+                }
+                else
+                {
+                    <a href="products/view/@cardProduct!.Value.Slug">
+                        <img src="/images/placeholder/vecteezy_default-image-missing-placeholder_48910778.jpg"
+                             class="card-img-top" alt="Missing Image Picture Created By: Khanh Nguyen" style="max-width: 180px;">
+                    </a>
+                }
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <a href="products/view/@cardProduct.Value.Slug"><h5 class="card-title">@cardProduct.Value.Name</h5></a>
+                    <p class="card-text"><strong>For Ages:</strong> @cardProduct.Value.ContentRating+</p>
+                    <p class="card-text">@cardItem!.Value.Notes</p>
+                    <a href="products/view/@cardProduct.Value.Slug" class="btn btn-primary">View Product</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int recommendedItemId { get; set; }
+
+    private int productId { get; set; }
+
+    private bool notFound { get; set; } = false;
+
+    private RecommendedItemResponse? cardItem = new();
+    private ProductResponse? cardProduct = new();
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(recommendedItemId <= 0)
+        {
+            notFound = true;
+        }
+        else
+        {
+            var cardItemResponse = await recommendationItemService.GetRecommendationItemById(recommendedItemId);
+            if (cardItemResponse == null)
+            {
+                notFound = true;
+            }
+            else
+            {
+                cardItem = cardItemResponse;
+                var cardProductResponse = await productService.GetProductById(cardItem.Value.ProductId);
+                if(cardItemResponse == null)
+                {
+                    notFound = true;
+                }
+                else
+                {
+                    cardProduct = cardProductResponse;
+                }
+            }
+        }
+        loading = false;
+    } 
+}
+
+

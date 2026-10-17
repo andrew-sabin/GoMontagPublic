@@ -1,0 +1,299 @@
+﻿@page "/site-news/article/{slug}"
+@inject INewsBlogClientToServerComponentService articleService
+@inject IUserClientToServerComponentService UserService
+@inject IUserTimeZoneClientService TimeZoneService
+@inject NavigationManager navigationManager
+@using GoMontag_WebApp.Client.Pages.Entities.Accounts.Users
+@using GoMontag_WebApp.Client.Shared.Buttons.Articles
+@using GoMontag_WebApp.Helpers
+@using GoMontag_WebApp.Client.Shared
+
+<div class="article-grid">
+    <div class="left-column"></div>
+    <div class="main-content-column">
+        @if (isLoading)
+        {
+            <p><strong>Loading Article Please Wait...</strong></p>
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        }
+        else
+        {
+            @if (newsArticle != null)
+            {
+                <PageTitle>Blog: @newsArticle.Value.Title - GoMontag</PageTitle>
+                <HeadContent>
+                    <meta name="description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+                    <meta name="og:title" content="Blog: @newsArticle.Value.Title - GoMontag" />
+                    <link rel="canonical" href="https://www.gomontag.com/site-news/article/@slug" />
+                    <meta property="og:url" content="https://www.gomontag.com/site-news/article/@slug" />
+                    <meta property="og:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+                    @if (string.IsNullOrEmpty(newsArticle.Value.CoverImageUrl))
+                    {
+                        <meta name="image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+                        <meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+                    }
+                    else
+                    {
+                        <meta name="image" content="@newsArticle.Value.CoverImageUrl" />
+                        <meta property="og:image" content="@newsArticle.Value.CoverImageUrl" />
+                    }
+                    <meta name="keywords" content="Video Games, Software, Tools, Appliances, Ownership, GoMontag, @newsArticle.Value.Title" />
+                    @* Twitter Meta Tags *@
+                    <meta name="twitter:card" content="summary">
+                    <meta name="twitter:image" content="@newsArticle.Value.CoverImageUrl" />
+                    <meta name="twitter:site" content="https://www.gomontag.com/site-news/article/@slug" />
+                    <meta name="twitter:title" content="Blog: @newsArticle.Value.Title - GoMontag" />
+                    <meta name="twitter:description" content="Stop second-guessing your purchases. GoMontag is the simple app to check the ownership for your video games, software, appliances, tools, and more. Know what you own, always." />
+                    @if (string.IsNullOrEmpty(newsArticle.Value.CoverImageUrl))
+                    {
+                        <meta name="image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+                        <meta name="twitter:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+                    }
+                    else
+                    {
+                        <meta name="image" content="@newsArticle.Value.CoverImageUrl" />
+                        <meta property="twitter:image" content="@newsArticle.Value.CoverImageUrl" />
+                    }
+                </HeadContent>
+                <div class="article-breadcrumbs-col">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/">Home</a></li>
+                            <li class="breadcrumb-item"><a href="/site-news">Blog</a></li>
+                            <li class="breadcrumb-item active">@newsArticle.Value.Title</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="article-title-col">
+                    <hr />
+                    <h3>@newsArticle.Value.Title</h3>
+                    @if (!string.IsNullOrWhiteSpace(newsArticle.Value.CoverImageUrl))
+                    {
+                        <img src="@newsArticle.Value.CoverImageUrl"
+                             style="max-width: min(300px, 100%); max-height: 300px;"
+                             class="img-thumbnail" />
+                    }
+                </div>
+                <div class="article-creation-col">
+                    <hr />
+                    <h4>Blog Type: @newsArticle.Value.ArticleType</h4>
+
+                    @if (userCreationDate != userEditedDate)
+                    {
+                        <p>Created on:@userCreationDate.ToString("f")</p>
+                        <p>Lasted Edited:@userEditedDate.ToString("f")</p>
+                    }
+                    else
+                    {
+                        <p>Created on:@userCreationDate.ToString("f")</p>
+                    }
+                </div>
+                <div class="article-authors-col">
+                    @if (newsArticle.Value.AuthorId != newsArticle.Value.ModifierId)
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" onlyShowName="true" />
+                        <p><strong>Lasted Edited By:</strong></p>
+                        <DisplayUserInfo UserId="@editorId" onlyShowName="true" />
+                    }
+                    else
+                    {
+                        <p><strong>Author:</strong></p>
+                        <DisplayUserInfo UserId="@newsArticle.Value.AuthorId" />
+                    }
+                </div>
+                <AuthorizeView Roles="Admin" Context="authState">
+                    <Authorized>
+                        <EditArticleButton articleSlug="@slug" ButtonText="Edit Article" />
+                    </Authorized>
+                </AuthorizeView>
+                <div class="article-toc">
+                    <br />
+                    <TableOfContents HTMLContent="@newsArticle.Value.NewsArticle" Slug="@slug" />
+                </div>
+                <div class="article-body-col">
+                    <hr />
+                    @((MarkupString)SanitizeHTML(newsArticle.Value.NewsArticle))
+                </div>
+                <div class="article-images">
+                    <Lightbox ImageUrls="imageUrls" ImageAlts="imageAlts" ShowNavigation="true" ShowCounter="true" ShowGallary="true" />
+                </div>
+            }
+            else
+            {
+                <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/">Home</a></li>
+                            <li class="breadcrumb-item"><a href="/site-news">Blog</a></li>
+                            <li class="breadcrumb-item active">Article Not Found</li>
+                        </ol>
+                 </nav>
+                <h2>404 Article Not Found</h2>
+            }
+        }
+    </div>
+    <div class="right-column"></div>
+</div>
+
+@code {
+    [Parameter]
+    public string? slug { get; set; }
+
+    private DateTimeOffset userCreationDate;
+    private DateTimeOffset userEditedDate;
+
+    private NewsBlogResponse? newsArticle = new NewsBlogResponse();
+
+    private string? authorId { get; set; }
+    private string? editorId { get; set; }
+
+    private DateOnly articleCreationDate { get; set; }
+    private DateOnly? articleEditedDate { get; set; } = null;
+
+    private bool isLoading = true;
+
+    private Lightbox lightbox = new Lightbox();
+    private List<string> imageUrls = new();
+    private List<string> imageAlts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (slug != null)
+        {
+            var result = await articleService.GetArticleBySlug(slug);
+            if (result == null)
+            {
+                newsArticle = null;
+            }
+            else
+            {
+                newsArticle = result;
+                authorId = result.Value.AuthorId;
+                editorId = result.Value.ModifierId;
+
+                userCreationDate = TimeZoneService.ConvertToUserTime(newsArticle.Value.CreatedDate);
+                userEditedDate = TimeZoneService.ConvertToUserTime(newsArticle.Value.ModifiedDate);
+                ExtractImages((NewsBlogResponse)newsArticle);
+            }
+            
+            isLoading = false;
+        }
+        else
+        {
+            newsArticle = null;
+        }
+    }
+
+    private async Task<string> GetUserProfile(string userId)
+    {
+        var user = await UserService.GetUserByIdAsync(userId);
+        if (user == null)
+        {
+            return "Unknown User";
+        }
+        else
+        {
+            var userName = user.Value.UserName;
+            return userName;
+        }
+    }
+
+    private string SanitizeHTML(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+
+        html = SanitizeImageMarkup(html);
+        html = SanitizeIframe(html);
+
+        return html;
+    }
+
+    private string SanitizeImageMarkup(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+        // Remove width and height attributes
+        html = Regex.Replace(
+            html,
+            @"\s*(height)\s*=\s*[""'][^""']*[""']",
+            "",
+            RegexOptions.IgnoreCase);
+        // Strip width/height (and min/max variants) from the style attribute
+        html = Regex.Replace(
+            html,
+            @"(style\s*=\s*[""'])([^""']*)([""'])",
+            m =>
+            {
+                var cleaned = Regex.Replace(
+                    m.Groups[2].Value,
+                    @"(^|;)\s*(width|height|min-width|max-width|min-height|max-height)\s*:[^;]*",
+                    "",
+                    RegexOptions.IgnoreCase);
+                return m.Groups[1].Value + cleaned.Trim(';', ' ') + m.Groups[3].Value;
+            },
+            RegexOptions.IgnoreCase);
+        return html;
+    }
+
+    private string SanitizeIframe(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return html;
+        var iframePattern = @"<iframe\s([^>]*)>";
+        var replacement = @"<div class=""iframe-container"" style=""position: relative; width: 100%; max-width: 560px; max-height: 315px;
+		padding-bottom: 265px; padding-top:50px;"";><iframe $1>";
+
+        html = Regex.Replace(html, iframePattern, replacement, RegexOptions.IgnoreCase);
+
+        html = Regex.Replace(html, @"</iframe>", @"</iframe></div>", RegexOptions.IgnoreCase);
+
+        html = NormalizeIframeAttributes(html);
+
+        return html;
+    }
+
+
+    private string NormalizeIframeAttributes(string htmlContent)
+    {
+        // Any space between <iframe where there is 0 or more > whether that would be in the beginning of a paragraph or otherwise
+        string pattern = @"<iframe\s+([^>]*)>";
+        return Regex.Replace(htmlContent, pattern, match =>
+        {
+            string tagContent = match.Groups[1].Value;
+            //Any space betwen style= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*style=""[^""]*""", "", RegexOptions.IgnoreCase);
+            //Any space betwen width= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*width=""[^""]*""", "", RegexOptions.IgnoreCase);
+            //Any space betwen height= and anygroup or range between "" and replace it with an empty string
+            tagContent = Regex.Replace(tagContent, @"\s*height=""[^""]*""", "", RegexOptions.IgnoreCase);
+
+            return $@"<iframe width=""100%"" height=""315px"" style=""position: absolute; top: 0; left: 0; width: 100%; height: 315px;""{tagContent}>";
+        }, RegexOptions.IgnoreCase);
+    }
+
+    private void CreateArticle()
+    {
+        navigationManager.NavigateTo($"/site-news/createArticle");
+    }
+    private void EditArticle(string slug)
+    {
+        navigationManager.NavigateTo($"/site-news/article/{slug}/edit");
+    }
+
+    /* Lightbox Functions */
+    private void ExtractImages(NewsBlogResponse newsBlog)
+    {
+        imageUrls = HTMLImageExtractor.ExtractImageUrls(newsBlog.NewsArticle);
+        imageAlts = HTMLImageExtractor.ExtractImageAlts(newsBlog.NewsArticle);
+    }
+
+    private async void HandleImageClick(string imageUrl)
+    {
+        var index = imageUrls.FindIndex(url => url == imageUrl);
+        if (index >= 0 && lightbox != null)
+        {
+            lightbox.ShowImage(index);
+        }
+    }
+
+}

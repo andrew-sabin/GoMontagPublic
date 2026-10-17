@@ -1,0 +1,129 @@
+﻿@page "/products/view/{Slug}/lock"
+@inject IProductClientToServerComponentService ProductService
+@inject ICategoryClientToServerComponentService CategoryService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin,Moderator")]
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@if (Id is not null || !string.IsNullOrEmpty(Slug))
+{
+	<PageTitle>Locking-@product!.Name - GoMontag</PageTitle>
+	<nav aria-label="breadcrumb">
+		<ol class="breadcrumb">
+			<li class="breadcrumb-item"><a href="/">Home</a></li>
+			<li class="breadcrumb-item"><a href="/products/@product.CategoryName/?title=@product.Name&page=1">Products</a></li>
+			<li class="breadcrumb-item"><a href="/products/view/@Slug">@product.Name</a></li>
+			<li class="breadcrumb-item active">@product.Name Lock</li>
+		</ol>
+	</nav>
+	<h3>Edit Product Information</h3>
+}
+@if(product.IsLocked)
+{
+	<h3>Unlock Product</h3>
+}
+else
+{
+	<h3>Lock Product</h3>
+}
+
+
+<EditForm Model="@product">
+	<div class="form-group">
+		<InputCheckbox id="productIsLocked" class="form-check-input" @bind-Value="product.IsLocked" />
+		<label class="form-check-label" for="formatIsLocked">Locked</label>
+	</div>
+	@if (product.IsLocked)
+	{
+		<div class="form-group">
+			<label for="formatLockedReason">Lock Reason</label>
+			<InputTextArea id="formatLockedReason" class="form-control" @bind-Value="product.lockedReason" />
+		</div>
+	}
+	</EditForm>
+<button type="submit" class="btn btn-primary mt-4" @onclick="HandleValidSubmit">Submit</button>
+<button type="button" class="btn btn-secondary mt-4 mx-1" @onclick="CancelEdit">Cancel</button>
+
+	@code {
+	[Parameter]
+	public int? Id { get; set; }
+	[Parameter]
+	public string? Slug { get; set; }
+
+	ProductRequest product = new ProductRequest();
+
+	private IJSObjectReference? module;
+
+	private async Task SetPageTitle(string title)
+	{
+		if (module != null)
+			await module.InvokeVoidAsync("setTitle", title);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+		if (CategoryService.ProductCategories.Count == 0)
+		{
+			await CategoryService.LoadAllProductCategories();
+		}
+		CategoryService.OnChange += StateHasChanged;
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!String.IsNullOrEmpty(Slug))
+		{
+			var result = await ProductService.GetProductBySlug(Slug);
+			Id = result.Value.Id;
+			product = new ProductRequest
+			{
+				Name = result.Value.Name,
+				Slug = result.Value.Slug,
+				ProductLaunchDate = result.Value.ProductLaunchDate,
+				Creators = result.Value.Creators!,
+				CoverImageURL = result.Value.CoverImageURL,
+				ContentRating = result.Value.ContentRating,
+				IsLocked = result.Value.IsLocked,
+				LockedBy = result.Value.LockedByUser,
+				lockedReason = result.Value.lockedReason,
+				IsAIAssisted = result.Value.IsAIAssisted,
+				AIAssistsWith = result.Value.AIAssistsWith,
+				ForMatureAudiences = result.Value.ForMatureAudiences,
+				MatureAudienceReason = result.Value.MatureAudienceReason,
+				Description = result.Value.Description,
+				CategoryId = result.Value.Category.Id
+			};
+			if (product.IsLocked)
+			{
+				await SetPageTitle($"Unlocking {product!.Name} - GoMontag");
+			}
+			else
+			{
+				await SetPageTitle($"Locking {product!.Name} - GoMontag");
+			}
+			
+		}
+	}
+
+	async Task HandleValidSubmit()
+	{
+		await ProductService.LockProduct((int)Id!, product);
+		NavigationManager.NavigateTo($"/products/view/{Slug}");
+
+		// Optionally, redirect or show a success message
+	}
+
+	async Task CancelEdit()
+	{
+		NavigationManager.NavigateTo($"/products/view/{Slug}");
+	}
+
+
+	public void Dispose()
+	{
+		// Unsubscribe from the event to prevent memory leaks
+		CategoryService.OnChange -= StateHasChanged;
+	}
+}

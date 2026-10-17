@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AngleSharp" Version="1.5.2" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+		<PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+		<PackageReference Include="Blazorise.Captcha" Version="2.2.2" />
+		<PackageReference Include="Blazorise.Captcha.ReCaptcha" Version="2.2.2" />
+		<PackageReference Include="BlazorSortable" Version="8.1.0" />
+		<PackageReference Include="BlazorTextDiff" Version="2026.2.23.33037" />
+		<PackageReference Include="GoogleCaptchaComponent" Version="6.0.0" />
+		<PackageReference Include="Mapster" Version="10.0.11" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
+		<PackageReference Include="Sqids" Version="3.2.1" />
+		<PackageReference Include="Syncfusion.Blazor.DataForm" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.DocIO.NET" Version="34.1.32" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
+		<PackageReference Include="Syncfusion.Blazor.Core" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Blazor.Themes" Version="34.1.32" />
+		<PackageReference Include="Syncfusion.Licensing" Version="34.1.32" />
+		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EasyAppDev.Blazor.AutoComplete-main\src\EasyAppDev.Blazor.AutoComplete.OData\EasyAppDev.Blazor.AutoComplete.OData.csproj" />
+    <ProjectReference Include="..\EasyAppDev.Blazor.AutoComplete-main\src\EasyAppDev.Blazor.AutoComplete\EasyAppDev.Blazor.AutoComplete.csproj" />
+    <ProjectReference Include="..\GoMontag,Shared\GoMontag,Shared.csproj" />
+  </ItemGroup>
+
+</Project>

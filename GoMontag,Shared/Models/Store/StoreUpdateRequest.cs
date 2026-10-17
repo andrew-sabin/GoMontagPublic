@@ -1,0 +1,23 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace GoMontag.Shared.Models.Store
+{
+    public record struct StoreUpdateRequest(
+        string Name,
+        string? Slug,
+        string Industry,
+        string? LogoURL,
+        bool Online,
+        string? Street,
+        string? City,
+        string? State,
+        string? PostalCode,
+        string? Country,
+        string Phone,
+        string Email,
+        string? WebsiteURL);
+}

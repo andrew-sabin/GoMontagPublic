@@ -1,0 +1,270 @@
+﻿@page "/recommend/{listHash}/edit"
+@inject IRecommendationItemClientToServerComponentService itemService
+@inject IRecommendationListClientToServerComponentService listService
+@inject IProductClientToServerComponentService productService
+@inject IUserClientToServerComponentService UserComponentService
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject IJSRuntime JSRuntime
+@using BlazorSortable;
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@if (isLoading == false)
+{
+    <PageTitle>Editing @recommendList.Name - GoMontag</PageTitle>
+    <div class="list-values">
+        <EditForm Model="recommendList" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <div>
+                <label for="listName">List Name</label>
+                <InputText id="listName" class="form-control" @bind-Value="recommendList.Name" />
+                <ValidationMessage For="@(() => recommendList.Name)" />
+            </div>
+            <div>
+                <label for="listDesc">List Description</label>
+                <InputTextArea id="listDesc" class="form-control" @bind-Value="recommendList.Description" />
+                <ValidationMessage For="@(() => recommendList.Description)" />
+            </div>
+        </EditForm>
+        <button class="btn btn-primary" type="submit" @onclick="@HandleSubmit">Submit Changes</button>
+        <button class="btn btn-secondary" type="button" @onclick="@CancelEdit">Cancel</button>
+        <button class="btn btn-danger" type="submit" @onclick="@HandleDeleteList">Delete List</button>
+    </div>
+    
+
+    <div class="sortable-sample">
+        <Sortable Items="recommendedItems"
+                  Group="tasks"
+                  MultiDrag="true"
+                  Class="sortable-column"
+                  OnUpdate="async (SortableEventArgs<RecommendedItemRequest> args) => await HandleReorder(args)"
+                  OnRemove="async (SortableEventArgs<RecommendedItemRequest> args) => await HandleDelete(args)">
+            <div class="sortable-item">
+                <h3>@context.ProductName</h3>
+                <img src="@context.ProductCoverImg" style="max-width: 100px; max-height: auto" />
+                <hr />
+                <p><strong>@context.Notes</strong></p>
+            </div>
+        </Sortable>
+
+        <Sortable TItem="object"
+                  Group="delete"
+                  PutMode="SortablePutMode.Groups"
+                  PutGroups="@(["tasks"])"
+                  Class="sortable-delete" />
+    </div>
+    
+}
+else
+{
+    <p><strong>Loading In Recommended Items Please Wait...</strong></p>
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+
+
+
+<style>
+    .sortable-sample {
+        display: flex;
+        gap: 16px;
+    }
+
+    .sortable-column,
+    .sortable-delete {
+        
+        min-height: 96px;
+        padding: 12px;
+        border: 2px dashed #d0d7de;
+        border-radius: 6px;
+    }
+
+    .sortable-column {
+        width: 750px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .sortable-delete {
+        width: 180px;
+        border-color: #dc3545;
+        overflow: hidden;
+    }
+
+    .sortable-item {
+        padding: 10px 12px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        background: white;
+        color: #24292f;
+        cursor: grab;
+        user-select: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int listId { get; set; }
+    [Parameter]
+    public string? listHash { get; set; }
+
+    private List<int> itemIds = new List<int>();
+
+    private ListRequest recommendList { get; set; } = new();
+    private List<RecommendedItemRequest> recommendedItems { get; set; } = new List<RecommendedItemRequest>();
+    private List<RecommendedItemRequest> toDeleteItems { get; set; } = new List<RecommendedItemRequest>();
+
+    private bool isLoading = true;
+
+    private string UserName = string.Empty;
+    private IJSObjectReference? module;
+
+    private async Task SetPageTitle(string title)
+    {
+        if (module != null)
+            await module.InvokeVoidAsync("setTitle", title);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+        if (serverUserRole == null || serverUserRole.Count == 0)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+        if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        if (!string.IsNullOrEmpty(listHash))
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/titleHelper.js");
+            var listResponse = await listService.GetRecommendListById(listHash);
+            if(listResponse == null)
+            {
+                navigationManager.NavigateTo("not found");
+            }
+            else
+            {
+                recommendList = new ListRequest
+                {
+                    Id = listResponse.Value.Id,
+                    Name = listResponse.Value.Name,
+                    Description = listResponse.Value.Description,
+                    SharableLink = listResponse.Value.SharableLink,
+                    UserName = listResponse.Value.UserName
+                };
+                var response = await itemService.GetItemsByRecommendationList(listHash);
+                foreach(var item in response)
+                {
+                    var itemInsert = new RecommendedItemRequest
+                        {
+                            Id = item.Id,
+                            ProductId = item.ProductId,
+                            RecommendationListId = item.RecommendationList.Id,
+                            Order = item.Order,
+                            Notes = item.Notes,
+                            ProductName = item.ProductName,
+                            ProductCoverImg = item.ProductCoverImg
+                        };
+                    itemIds.Add(item.Id);
+                    recommendedItems.Add(itemInsert);
+                }
+                UserName = listResponse.Value.UserName;
+                await SetPageTitle($"Editing {recommendList.Name} - GoMontag");
+            }
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleReorder(SortableEventArgs<RecommendedItemRequest> args)
+    {
+        for (int i = 0; i < recommendedItems.Count(); i++)
+        {
+            recommendedItems[i].Order = i;
+        }
+    }
+
+    private async Task HandleDelete(SortableEventArgs<RecommendedItemRequest> args)
+    {
+        var deleteItems = args.Items;
+        var itemIndex = args.Item;
+        if (deleteItems.Count() > 0)
+        {
+            foreach(var item in deleteItems)
+            {
+                toDeleteItems.Add(item);
+            }
+        }
+        else
+        {
+            toDeleteItems.Add(itemIndex);
+        }
+
+
+        for (int i = 0; i < recommendedItems.Count(); i++)
+        {
+            recommendedItems[i].Order = i;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user == null || string.IsNullOrEmpty(user.Identity!.Name))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var serverUserRole = await UserComponentService.GetUserRole(user.Identity.Name);
+        if (serverUserRole == null || serverUserRole.Count == 0)
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        var allowedRoles = new[] { "Admin", "Moderator", "AlphaTester", "User" };
+        if (!allowedRoles.Contains(serverUserRole[0], StringComparer.OrdinalIgnoreCase))
+        {
+            navigationManager.NavigateTo("notfound");
+            return;
+        }
+        foreach(var item in toDeleteItems)
+        {
+            await itemService.DeleteRecommendItem(item.Id);
+        }
+        foreach(var item in recommendedItems)
+        {
+            await itemService.UpdateItem(item.Id, item);
+        }
+        await listService.UpdateList(listHash, recommendList);
+        navigationManager.NavigateTo($"/recommend/{listHash}");
+    }
+
+    private async Task CancelEdit()
+    {
+        navigationManager.NavigateTo($"/recommend/{listHash}");
+    }
+
+    private async Task HandleDeleteList()
+    {
+        foreach(var itemId in itemIds)
+        {
+            await itemService.DeleteRecommendItem(itemId);
+        }
+        await listService.DeleteRecommendList(listHash!);
+        navigationManager.NavigateTo($"users/{UserName}");
+    }
+}

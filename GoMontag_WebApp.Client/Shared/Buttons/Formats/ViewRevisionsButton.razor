@@ -1,0 +1,27 @@
+﻿@inject NavigationManager NavigationManager
+@* @rendermode InteractiveServer *@
+
+@* <button class="btn btn-primary" @onclick="@(() => NavigateToPage(productSlug, hashedFormatId))">
+    @ButtonText
+</button> *@
+
+<a class="btn btn-primary" href="/products/view/@productSlug/formats/@hashedFormatId/revisions">
+    @ButtonText
+</a>
+
+@code {
+    [Parameter]
+    required public string productSlug { get; set; }
+    [Parameter]
+    required public string hashedFormatId { get; set; }
+    [Parameter]
+    required public string? ButtonText { get; set; }
+
+
+    private void NavigateToPage(string productSlug, string hashedId)
+    {
+        NavigationManager.NavigateTo($"/products/view/{productSlug}/formats/{hashedId}/revisions");
+    }
+}
+
+

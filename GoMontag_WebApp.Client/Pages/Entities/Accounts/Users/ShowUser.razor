@@ -1,0 +1,328 @@
+﻿@page "/users/{UserName}"
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserClientToServerComponentService UserService
+@inject IRecommendationListClientToServerComponentService listService
+@inject IFormatClientToServerComponentService formatService
+@inject IProductClientToServerComponentService productService
+@inject IFormatRevisionClientToServerComponentService formatRevisionService
+@using Blazorise
+@using GoMontag_WebApp.Client.Pages.Entities.RecommendationLists
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+
+<div class="site-grid">
+	<div class="left-column"></div>
+	<div class="main-content-column">
+		@if (isLoading)
+		{
+			<p><strong>Loading Profile Please Wait...</strong></p>
+			<div class="spinner-border" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		}
+		else
+		{
+			@if (user == null)
+			{
+				<nav aria-label="breadcrumb">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item"><a href="/">Home</a></li>
+						<li class="breadcrumb-item active">User Not Found</li>
+					</ol>
+				</nav>
+				<h2>User not found.</h2>
+			}
+			else
+			{
+				@if (!String.IsNullOrEmpty(user.Value.DisplayName))
+				{
+					<PageTitle>@user.Value.DisplayName's Profile - GoMontag</PageTitle>
+					<HeadContent>
+						<RadzenTheme Theme="material" />
+						<meta name="og:title" content="@user.Value.DisplayName's Profile - GoMontag" />
+						<meta name="description" content="@user.Value.DisplayName's Page @user.Value.Bio" />
+						<meta property="og:description" content="@user.Value.DisplayName's Page @user.Value.Bio" />
+						<link rel="canonical" href="https://www.gomontag.com/users/@UserName" />
+						<meta property="og:url" content="https://www.gomontag.com/users/@UserName" />
+						<link rel="canonical" href="https://www.gomontag.com/users/@UserName" />
+						<meta property="og:url" content="https://www.gomontag.com/users/@UserName" />
+						@if (!String.IsNullOrEmpty(user.Value.ProfileImageURL))
+						{
+							<meta name="image" content="@user.Value.ProfileImageURL" />
+							<meta property="og:image" content="@user.Value.ProfileImageURL" />
+						}
+						else
+						{
+							<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+						}
+					</HeadContent>
+					
+				}
+				else
+				{
+					<PageTitle>@user.Value.UserName's Profile - GoMontag</PageTitle>
+					<HeadContent>
+						<meta name="og:title" content="@user.Value.UserName's Profile - GoMontag" />
+						<meta name="description" content="@user.Value.DisplayName's Page @user.Value.Bio" />
+						<meta property="og:description" content="@user.Value.UserName's Page @user.Value.Bio" />
+						<link rel="canonical" href="https://www.gomontag.com/users/@UserName" />
+						<meta property="og:url" content="https://www.gomontag.com/users/@UserName" />
+						@if (!String.IsNullOrEmpty(user.Value.ProfileImageURL))
+						{
+							<meta name="image" content="@user.Value.ProfileImageURL" />
+							<meta property="og:image" content="@user.Value.ProfileImageURL" />
+						}
+						else
+						{
+							<meta property="og:image" content="https://images.gmntgstrg.com/defaultandresourceimages/gomontag-02_fit.svg" />
+						}
+					</HeadContent>
+				}
+				
+				
+				<nav aria-label="breadcrumb">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item"><a href="/">Home</a></li>
+						<li class="breadcrumb-item active">@UserName's Page</li>
+					</ol>
+				</nav>
+				<div class="user-image">
+					@if (!String.IsNullOrEmpty(user.Value.ProfileImageURL))
+					{
+						
+						<div>
+							<img src="@user.Value.ProfileImageURL" alt="Profile Image" class="avatar" style="max-width: 150px; max-height: 150px;" />
+						</div>
+					}
+					else
+					{
+						
+						<div>
+							<img src="https://images.gmntgstrg.com/defaultandresourceimages/user.png" alt="User account icons created by Luch Phou" class="avatar" style="max-width: 150px; max-height: 150px;" />
+						</div>
+					}
+				</div>
+				<div class="user-information">
+					@if (!String.IsNullOrEmpty(user.Value.DisplayName))
+					{
+						<h2>@user.Value.DisplayName's Profile </h2>
+						<h3>(@user.Value.UserName)</h3>
+					}
+					else
+					{
+						<h2>@user.Value.UserName's Profile</h2>
+					}
+					<div class="user-role">
+						@if (!string.IsNullOrEmpty(userRole))
+						{
+							<p><strong>Role: <u>@userRole</u></strong></p>
+						}
+						else
+						{
+							<p><strong>Role: <u>None</u></strong></p>
+						}
+					</div>
+					<p><strong>Joined On:</strong> @user.Value.CreatedAt.ToString("MMMM dd, yyyy")</p>
+					@if (!String.IsNullOrEmpty(user.Value.WebsiteURL))
+					{
+						<p><strong>Website:</strong><a target="_blank" rel="noopener noreferrer" href="@user.Value.WebsiteURL">@user.Value.WebsiteURL</a></p>
+					}
+				</div>
+				<div class="user-ban">
+					@if (user.Value.IsBanned)
+					{
+						<p class="text-danger"><strong>This user is banned.</strong></p>
+						<p><strong>Ban Reason:</strong> @user.Value.BanReason</p>
+						<p><strong>Banned Expires:</strong> @user.Value.BanEndDate?.ToString("MMMM dd, yyyy")</p>
+					}
+				</div>
+				@if (isAuthorized)
+				{
+					<div class="user-dob">
+						<p>
+							<strong>Date of Birth:</strong>
+							@user.Value.DateOfBirth
+						</p>
+					</div>
+				}
+				else
+				{
+					<AuthorizeView Roles="Admin, Moderator" Context="authState">
+						<Authorized>
+							<div class="user-dob">
+								<p>
+									<strong>User Date of Birth:</strong>
+									@user.Value.DateOfBirth
+								</p>
+							</div>
+						</Authorized>
+					</AuthorizeView>
+				}
+				<div class="user-bio">
+					<p>
+						<strong>Bio:</strong><br />
+						@user.Value.Bio
+					</p>
+				</div>
+				
+				<div class="user-stats">
+					<hr />
+					<p><strong>Products Added: </strong> @addedProducts</p>
+					<p><strong>Format Articles Created: </strong> @createdFormats</p>
+					<p><strong>Format Article Revisions Made:</strong> @formatRevisions</p>
+					
+				</div>
+			}
+			@if (isAuthorized && !isBanned)
+			{
+				<button class="btn btn-primary" onclick="@(() => CustomizeUserPage(UserName!))">
+					Customize Profile
+				</button>
+			}
+			<AuthorizeView Roles="Admin, Moderator" Context="authState">
+				<Authorized>
+					@if(user != null)
+					{
+						<button class="btn btn-primary" onclick="@(() => AdminEditUserPage(UserName!))">
+							Edit User (Admin)
+						</button>
+						<button class="btn btn-secondary" onclick="@(() => UpdateUserRole(UserName!))">
+							Update Role
+						</button>
+					}
+				</Authorized>
+			</AuthorizeView>
+			<hr />
+		}
+		<h3>Recommendations</h3>
+		@if (isLoadingReccs)
+		{
+			<br />
+			<p><strong>Loading Recommendations Please Wait</strong></p>
+		}
+		else
+		{
+			<br />
+			@if (recommendations.Count() < 2 && isAuthorized)
+			{
+				<button class="btn btn-primary" @onclick="@(() => CreateNewRecommendation(UserName!))">Create New Recommendation List</button>
+			}
+			<br />
+			@if(recommendations.Count() > 0)
+			{
+				foreach(var recc in recommendations)
+				{
+					<RecommendationSyncfusionsCarosel listId="recc.Id" />
+				}
+			}
+			else if(recommendations.Count() <= 0)
+			{
+				<p><strong>User Has No Recommendation Lists</strong></p>
+			}
+			
+		}
+	</div>
+	<div class="right-column"></div>
+</div>
+
+
+
+
+@code {
+	[Parameter]
+	public string? UserName { get; set; }
+	private UserResponse? user = new UserResponse();
+
+	public int createdFormats = 0;
+	public int addedProducts = 0;
+	public int formatRevisions = 0;
+
+	private string userRole = "";
+
+	private bool isAuthorized = false;
+	private bool isBanned = false;
+	private bool isLoading = true;
+
+	// Recommendations
+	private bool isLoadingReccs = true;
+	private List<ListResponse> recommendations { get; set; } = new List<ListResponse>();
+
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (string.IsNullOrWhiteSpace(UserName))
+		{
+			user = null;
+			isLoadingReccs = false;
+			return;
+		}
+		else
+		{
+			try
+			{
+				var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+				var userFind = authState.User;
+				var currentUserName = userFind.Identity!.Name;
+				isAuthorized = string.Equals(currentUserName, UserName, StringComparison.OrdinalIgnoreCase);
+
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex);
+				user = null;
+				isLoadingReccs = false;
+				return;
+			}
+			finally
+			{
+				isLoading = false;
+			}
+			var result = await UserService.GetUserAsync(UserName);
+			if (result == null)
+			{
+				user = null;
+				isLoadingReccs = false;
+				return;
+			}
+			else
+			{
+				user = result;
+				createdFormats = await formatService.CountAllUserCreatedFormats(user.Value.Id);
+				addedProducts = await productService.CountUserAddedProducts(user.Value.Id);
+				formatRevisions = await formatRevisionService.CountUserFormatRevisions(UserName);
+				isBanned = user.Value.IsBanned;
+				var resultingUserRoles = await UserService.GetUserRole(UserName!);
+				if (resultingUserRoles.Count > 0)
+				{
+					userRole = resultingUserRoles[0];
+				}
+				recommendations = await listService.GetRecommendListsByUserName(UserName);
+				isLoadingReccs = false;
+			}
+
+
+		}
+	}
+
+	private void CreateNewRecommendation(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/recommend/new");	
+	}
+
+	private void CustomizeUserPage(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/customize");
+	}
+
+	private void AdminEditUserPage(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/admin");
+	}
+
+	private void UpdateUserRole(string userName)
+	{
+		NavigationManager.NavigateTo($"/users/{userName}/roles");
+	}
+}
+

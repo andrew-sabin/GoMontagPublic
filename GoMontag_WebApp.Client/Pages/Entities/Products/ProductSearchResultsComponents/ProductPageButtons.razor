@@ -1,0 +1,114 @@
+﻿@inject NavigationManager NavigationManager
+@rendermode InteractiveWebAssembly
+
+@if (QueryPage > 1)
+{
+	<button class="btn btn-primary mx-2" @onclick="@(() => FirstPage())">
+		First Page
+	</button>
+	<button class="btn btn-primary mx-2" @onclick="@(() => PrevPage())">
+		<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+	</button>
+}
+else
+{
+	<button class="btn btn-primary mx-2" disabled>
+		First Page
+	</button>
+	<button class="btn btn-primary mx-2" disabled>
+		<i class="bi bi-arrow-left-square-fill"></i> Previous Page
+	</button>
+}
+
+@if (productAmount == PageAmount)
+{
+	<button class="btn btn-primary mx-2" @onclick="@(() => NextPage())">
+		Next Page <i class="bi bi-arrow-right-square-fill"></i>
+	</button>
+}
+else
+{
+	<button class="btn btn-primary mx-2" disabled>
+		Next Page <i class="bi bi-arrow-right-square-fill"></i>
+	</button>
+}
+
+@code {
+	[Parameter]
+	public string? ProductQuery { get; set; }
+	[Parameter]
+	public string? CategorySlug { get; set; }
+	[Parameter]
+	public int QueryPage { get; set; }
+	[Parameter]
+	public int productAmount { get; set; }
+	[Parameter]
+	public int PageAmount { get; set; }
+
+	private async Task FirstPage()
+	{
+		if (!string.IsNullOrEmpty(CategorySlug) && !string.IsNullOrEmpty(ProductQuery))
+		{
+			NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page=1", true);
+		}
+		else if (string.IsNullOrEmpty(CategorySlug) && !string.IsNullOrEmpty(ProductQuery))
+		{
+			NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page=1", true);
+		}
+		else if (!string.IsNullOrEmpty(CategorySlug) && string.IsNullOrEmpty(ProductQuery))
+		{
+			NavigationManager.NavigateTo($"/products/{CategorySlug}/recent/?page=1", true);
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/products/all/recent/?page=1", true);
+		}
+	}
+
+	private async Task NextPage()
+	{
+		if (productAmount == PageAmount)
+		{
+			if (!string.IsNullOrEmpty(CategorySlug))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page={QueryPage + 1}", true);
+			}
+			else if (string.IsNullOrEmpty(CategorySlug) && !string.IsNullOrEmpty(ProductQuery))
+			{
+				NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page={QueryPage + 1}", true);
+			}
+			else if (!string.IsNullOrEmpty(CategorySlug) && string.IsNullOrEmpty(ProductQuery))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/recent/?page={QueryPage + 1}", true);
+			}
+			else
+			{
+				NavigationManager.NavigateTo($"/products/all/recent/?page={QueryPage + 1}", true);
+			}
+		}
+	}
+
+	private async Task PrevPage()
+	{
+		if (QueryPage > 1)
+		{
+			if (!string.IsNullOrEmpty(CategorySlug))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/?title={ProductQuery}&page={QueryPage - 1}", true);
+			}
+			else if (string.IsNullOrEmpty(CategorySlug) && !string.IsNullOrEmpty(ProductQuery))
+			{
+				NavigationManager.NavigateTo($"/products/all/?title={ProductQuery}&page={QueryPage - 1}", true);
+			}
+			else if (!string.IsNullOrEmpty(CategorySlug) && string.IsNullOrEmpty(ProductQuery))
+			{
+				NavigationManager.NavigateTo($"/products/{CategorySlug}/recent/?page={QueryPage - 1}", true);
+			}
+			else
+			{
+				NavigationManager.NavigateTo($"/products/all/recent/?page={QueryPage - 1}", true);
+			}
+		}
+
+	}
+}

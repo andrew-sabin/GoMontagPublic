@@ -1,0 +1,35 @@
+﻿@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+@if(formatEdition == "Standard" || formatEdition == "Collection" || string.IsNullOrEmpty(formatEdition))
+{
+    <a class="btn btn-success" href="http://www.ebay.com/sch/@productName+@formatType" target="blank">
+        @ButtonText
+    </a>
+}
+else
+{
+    <a class="btn btn-success" href="http://www.ebay.com/sch/@productName+@formatType+@formatEdition" target="blank">
+        @ButtonText
+    </a>
+}
+
+
+@code {
+    [Parameter]
+    required public string productName { get; set; }
+    [Parameter]
+    required public string formatType { get; set; }
+    [Parameter]
+    required public string formatEdition { get; set; }
+    [Parameter]
+    required public string? ButtonText { get; set; }
+
+
+    private void NavigateToPage(string productSlug)
+    {
+        NavigationManager.NavigateTo(productSlug);
+    }
+}
+
+

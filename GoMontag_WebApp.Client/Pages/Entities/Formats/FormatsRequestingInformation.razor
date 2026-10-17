@@ -1,0 +1,88 @@
+﻿@page "/formats/info-requested"
+@inject IProductClientToServerComponentService ProductService
+@inject IFormatClientToServerComponentService FormatService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject HttpClient Http
+@attribute [AllowAnonymous]
+@rendermode InteractiveServer
+
+<PageTitle>Formats Requesting More Information - GoMontag</PageTitle>
+<h3>Formats Requesting More Information</h3>
+@if (!isLoading)
+{
+    <div class="formatSearch">
+        <input @bind="formatFilter" placeholder="Search by Type or Edition..." class="form-control mb-3" />
+    </div>
+
+    <QuickGrid Items="filteredFormats" Pagination="@pagination">
+        <TemplateColumn>
+            <ChildContent Context="f">
+                <a class="btn btn-primary" href="@($"products/view/{f.Product.Slug}/formats/{CreateIDHash(f.Id)}")">
+                    <i class="bi bi-eye"></i>
+                    </a>
+            </ChildContent>
+        </TemplateColumn>
+        <PropertyColumn Property="f => f.Product.Name" Title="Product" Sortable="true" />
+        <PropertyColumn Property="f => f.Product.CategoryName" Title="Category" Sortable="true" />
+        <PropertyColumn Property="f => f.Type" Title="Format" Sortable="true" Class="custom-class" />
+        <PropertyColumn Property="f => f.Edition" Title="Edition" Sortable="true" />
+        <PropertyColumn Property="f => f.ReleaseDate" Title="Release" Sortable="true" Class="custom-class" />
+        <TemplateColumn Title="Information Requested">
+            <ChildContent Context="f">
+                <a href="@($"products/view/{f.Product.Slug}/formats/{CreateIDHash(f.Id)}")">
+                    @f.InformationRequested
+                </a>
+            </ChildContent>
+
+        </TemplateColumn>
+        @* <PropertyColumn Property="f => f.InformationRequested" Title="Information Requested"/>         *@
+    </QuickGrid>
+
+    <Paginator State="@pagination" />
+    <br />
+}
+
+@code {
+    private string formatFilter = string.Empty;
+    private int totalFormats = 0;
+
+    private List<FormatResponse> formats = new List<FormatResponse>();
+    private IQueryable<FormatResponse>? queryableFormats;
+    private IQueryable<FormatResponse>? filteredFormats => queryableFormats?.Where(f => f.Type.Contains(formatFilter, StringComparison.OrdinalIgnoreCase) || f.Edition.Contains(formatFilter) 
+    || f.Product!.Name!.Contains(formatFilter));
+
+    private bool isLoading = true;
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 15 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var requestedFormats = await FormatService.GetAllInfoRequestedFormats();
+            if (requestedFormats.Count > 0)
+            {
+                queryableFormats = requestedFormats.AsQueryable();
+                totalFormats = queryableFormats.Count();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading formats: {ex.Message}");
+        }
+        isLoading = false;
+    }
+
+    private string CreateIDHash(int Id)
+    {
+        var sqids = new SqidsEncoder<int>(new()
+        {
+            MinLength = 0,
+            Alphabet = "",
+        });
+        var hash = sqids.Encode(Id);
+        return hash;
+    }
+
+}

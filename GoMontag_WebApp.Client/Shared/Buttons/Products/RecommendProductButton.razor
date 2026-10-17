@@ -1,0 +1,27 @@
+﻿@inject NavigationManager NavigationManager
+@* @rendermode InteractiveServer *@
+
+@* <button class="btn btn-primary" @onclick="@(() => NavigateToPage(productSlug))">
+    @ButtonText
+</button> *@
+
+<a class="btn btn-primary" href="/products/view/@productSlug/recommend">
+    <i class="bi bi-bookmark-heart-fill"></i> @ButtonText
+</a>
+
+
+
+@code {
+    [Parameter]
+    required public string productSlug { get; set; }
+    [Parameter]
+    required public string? ButtonText { get; set; }
+
+
+    private void NavigateToPage(string slug)
+    {
+        NavigationManager.NavigateTo($"/products/view/{slug}/recommend");
+    }
+}
+
+
