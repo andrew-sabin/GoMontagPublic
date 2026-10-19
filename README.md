@@ -22,3 +22,5 @@ Users can also recommend different products which will be available on their own
 
 ### Recommendations Example
 [Free Stuff that Rocks Recommendation List By Me](https://www.gomontag.com/recommend/erWePhEkMngx)
+
+[Developer Blog Going into Detail about the update](https://www.gomontag.com/site-news/article/recommendation-list-and-user-accounts-6-2026)
